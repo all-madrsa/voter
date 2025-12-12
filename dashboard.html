@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<button id="logoutBtn" class="btn3d logout-btn">Logout</button>
+
+<div class="button-container">
+  <button class="btn3d color-btn" style="background-color:#e74c3c;" onclick="openLink(this)">Button 1</button>
+  <button class="btn3d color-btn" style="background-color:#3498db;" onclick="openLink(this)">Button 2</button>
+  <button class="btn3d color-btn" style="background-color:#2ecc71;" onclick="openLink(this)">Button 3</button>
+  <button class="btn3d color-btn" style="background-color:#f1c40f;" onclick="openCloudinaryUpload()">Upload Image</button>
+</div>
+
+<!-- Container for uploaded images -->
+<div id="images" style="margin-top:20px; display:flex; flex-wrap:wrap; gap:10px; justify-content:center;"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
