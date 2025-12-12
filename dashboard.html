@@ -8,22 +8,24 @@
 </head>
 <body>
 
+<!-- Logout -->
 <button id="logoutBtn" class="btn3d logout-btn">Logout</button>
 
+<!-- Main Buttons -->
 <div class="button-container">
-  <button class="btn3d color-btn" style="background-color:#e74c3c;" onclick="openLink(this)">Button 1</button>
-  <button class="btn3d color-btn" style="background-color:#3498db;" onclick="openLink(this)">Button 2</button>
-  <button class="btn3d color-btn" style="background-color:#2ecc71;" onclick="openLink(this)">Button 3</button>
-  <button class="btn3d color-btn" style="background-color:#f1c40f;" onclick="openCloudinaryUpload()">Upload Image</button>
+  <button class="btn3d color-btn" onclick="window.open('https://electoralsearch.eci.gov.in/', '_blank')">Election Search</button>
+  <button class="btn3d color-btn" onclick="window.open('https://mahasecvoterlist.in/ObjectionOnClick/SearchVoterName', '_blank')">Voter Name Search</button>
+  <button class="btn3d color-btn" onclick="openCloudinaryUpload()">Upload Image</button>
+  <button class="btn3d blinking" onclick="window.print()">Print Page</button>
 </div>
 
+<!-- Uploaded images -->
 <div id="images" style="margin-top:20px; display:flex; flex-wrap:wrap; gap:10px; justify-content:center;"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 
 <script>
-// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyD7x6epAwfshYNzc4G8JvmE4Bu3UNdMB5U",
   authDomain: "nikah-c234b.firebaseapp.com",
@@ -37,7 +39,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 
-// Redirect to login if user not logged in
+// Redirect if not logged in
 auth.onAuthStateChanged(user => {
   if(!user) window.location.href = 'index.html';
 });
@@ -47,12 +49,6 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
   auth.signOut().then(() => window.location.href='index.html');
 });
 
-// Colorful buttons
-function openLink(button){
-  const link = prompt("Enter URL for this button:");
-  if(link) window.open(link, "_blank");
-}
-
 // Cloudinary Upload
 function openCloudinaryUpload(){
   const fileInput = document.createElement('input');
@@ -61,7 +57,7 @@ function openCloudinaryUpload(){
   fileInput.onchange = () => {
     const file = fileInput.files[0];
     if(!file) return;
-    const cloudName = 'YOUR_CLOUD_NAME'; // Replace with Cloudinary cloud name
+    const cloudName = 'YOUR_CLOUD_NAME'; // Replace with your Cloudinary cloud name
     const unsignedUploadPreset = 'dlsqxs7zl';
     const url = `https://api.cloudinary.com/v1_1/${cloudName}/upload`;
     const formData = new FormData();
@@ -74,6 +70,10 @@ function openCloudinaryUpload(){
           const imagesDiv = document.getElementById('images');
           const img = document.createElement('img');
           img.src = data.secure_url;
+          img.style.width = '150px';
+          img.style.height = '150px';
+          img.style.objectFit = 'cover';
+          img.style.borderRadius = '10px';
           imagesDiv.appendChild(img);
         } else alert("Upload failed");
       })
