@@ -1,13 +1,15 @@
+/* Reset */
 body, html {
   margin: 0;
   padding: 0;
-  font-family: Arial;
   height: 100%;
+  font-family: Arial, sans-serif;
+  overflow: hidden;
 }
 
 .bg-image {
   width: 100%;
-  height: 100vh;
+  height: 100%;
   object-fit: cover;
   position: absolute;
   top: 0;
@@ -15,55 +17,46 @@ body, html {
   z-index: -1;
 }
 
-/* 3D button styles */
+/* Center container */
+.login-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+/* 3D Button */
 .btn3d {
-  padding: 15px 30px;
+  padding: 20px 50px;
   border: none;
   color: white;
-  font-size: 16px;
+  font-size: 20px;
   cursor: pointer;
-  border-radius: 10px;
-  box-shadow: 0 5px #999;
+  border-radius: 12px;
+  box-shadow: 0 6px #999;
   transition: all 0.2s ease;
+  position: relative;
+  z-index: 1;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
+/* Press effect */
 .btn3d:active {
   transform: translateY(4px);
-  box-shadow: 0 2px #666;
+  box-shadow: 0 3px #666;
 }
 
-/* Login button */
-.login-btn {
-  position: absolute;
-  bottom: 20%;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: #3498db;
+/* Blinking / color animation */
+@keyframes blinkColor {
+  0% { background-color: #3498db; }
+  25% { background-color: #e74c3c; }
+  50% { background-color: #2ecc71; }
+  75% { background-color: #f1c40f; }
+  100% { background-color: #3498db; }
 }
 
-/* Logout button small cone */
-.logout-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background-color: #e74c3c;
-  border-radius: 50% 50% 50% 0;
-  width: 60px;
-  height: 40px;
-  font-size: 12px;
-}
-
-/* Dashboard buttons container */
-.button-container {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.color-btn {
-  width: 180px;
+.blinking {
+  animation: blinkColor 2s infinite;
 }
