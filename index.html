@@ -9,7 +9,7 @@
 <body>
   <div class="login-page">
     <img src="assets/bg.jpg" alt="Background" class="bg-image">
-    <button id="loginBtn" class="btn3d login-btn">Login</button>
+    <button id="loginBtn" class="btn3d login-btn">Login with Google</button>
   </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -30,12 +30,16 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 
-// Login button
+// Google login
 const loginBtn = document.getElementById('loginBtn');
 loginBtn.addEventListener('click', () => {
-  auth.signInAnonymously().then(() => {
-    window.location.href = 'dashboard.html';
-  }).catch(err => alert(err.message));
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider)
+    .then((result) => {
+      // Successfully signed in
+      window.location.href = 'dashboard.html';
+    })
+    .catch(err => alert(err.message));
 });
 </script>
 </body>
