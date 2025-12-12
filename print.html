@@ -2,141 +2,200 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>PDF Voter Extract Tool</title>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.min.js"></script>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF + Image Merge & Mini Print</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-    body {
-        font-family: Arial;
-        background: #f1f1f1;
-        padding: 20px;
-        text-align: center;
-    }
-    .box {
-        background: white;
-        padding: 20px;
-        border-radius: 15px;
-        width: 90%;
-        max-width: 450px;
-        margin: auto;
-        box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    }
-    .btn {
-        padding: 14px 30px;
-        margin: 10px;
-        background: #007bff;
-        color: white;
-        font-size: 18px;
-        border-radius: 10px;
-        border: none;
-    }
-    .card {
-        width: 100%;
-        background: white;
-        padding: 15px;
-        border-radius: 10px;
-        margin-top: 15px;
-        text-align: left;
-        font-size: 17px;
-        line-height: 1.6;
-        border: 1px solid #ccc;
-    }
-
-    @media print {
-        body * { visibility: hidden; }
-        #printArea, #printArea * { visibility: visible; }
-        #printArea {
-            margin: 0;
-            padding: 0;
-            position: absolute;
-            top: 0;
-            width: 100%;
-        }
-        @page { margin: 5mm; }
-    }
+body { font-family: Arial; background:#f0f0f0; padding:20px; }
+h2 { text-align:center; }
+input { margin:10px 0; }
+#preview { width:220px; border:1px solid #ccc; padding:5px; background:#fff; }
+#preview img { width:100%; margin-top:5px; }
+.btn { padding:10px 15px; margin:5px; cursor:pointer; border:none; background:#3498db; color:#fff; border-radius:5px; }
+.btn:hover { background:#2980b9; }
+.print-area { width:200px; font-size:12px; line-height:1.2; }
+.print-area img { width:100%; margin-top:5px; }
+#image-controls { margin-top:10px; }
 </style>
-
 </head>
 <body>
 
-<h2>Extract Voter Details from PDF</h2>
+<h2>PDF + Image Merge & Mini Print</h2>
 
-<div class="box">
-    <input type="file" id="pdfFile" accept="application/pdf"><br><br>
-    <button class="btn" onclick="extractText()">Extract Info</button>
-</div>
+<label>Upload PDF:</label><br>
+<input type="file" id="pdfFile" accept=".pdf"><br>
 
-<div id="printArea"></div>
+<label>Upload Image (once):</label><br>
+<input type="file" id="imgFile" accept="image/*"><br>
+<div id="image-controls"></div>
 
-<button id="printBtn" class="btn" style="display:none;" onclick="window.print()">Print</button>
-<button id="waBtn" class="btn" style="display:none;" onclick="sendWA()">WhatsApp Send</button>
+<button class="btn" onclick="generatePreview()">Merge & Preview</button>
+<button class="btn" onclick="printContent()">Print</button>
+<button class="btn" id="downloadBtn">Download PDF</button>
+<button class="btn" id="whatsappBtn">WhatsApp Send</button>
+
+<div id="preview"></div>
 
 <script>
-async function extractText() {
-    const file = document.getElementById("pdfFile").files[0];
-    if (!file) return alert("Upload PDF!");
+let extractedData = {};
+let uploadedImage = null;
 
-    const reader = new FileReader();
+// PDF upload
+document.getElementById('pdfFile').addEventListener('change', async function(e){
+  const file = e.target.files[0];
+  if(!file) return;
 
-    reader.onload = async function () {
-        const typedarray = new Uint8Array(this.result);
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+  let textContent = '';
+  for(let i=1;i<=pdf.numPages;i++){
+    const page = await pdf.getPage(i);
+    const txt = await page.getTextContent();
+    txt.items.forEach(item => textContent += item.str + '\n');
+  }
 
-        const pdf = await pdfjsLib.getDocument(typedarray).promise;
-        const page = await pdf.getPage(1);
+  // Label-based extraction
+  extractedData = {
+    firstName: getField(textContent, 'पहिले नाव / First Name'),
+    lastName: getField(textContent, 'आडनाव / Last Name'),
+    relativeFirst: getField(textContent, "नातेवाईकाचे पहिले नाव / Relative's First Name"),
+    relativeLast: getField(textContent, "नातेवाईकाचे आडनाव / Relative's Last Name"),
+    age: getField(textContent, 'वय / Age'),
+    gender: getField(textContent, 'लिंग / Gender'),
+    epic: getField(textContent, 'EPIC क्रमांक / EPIC No'),
+    pollingStation: getField(textContent, 'मतदान केंद्र / Polling Station'),
+    partNumber: getField(textContent, 'भाग क्रमांक-भागाचे नाव / Part Number- Part Name'),
+    partSerial: getField(textContent, 'भाग अनुक्रम क्रमांक/ Part Serial Number')
+  };
+});
 
-        const textContent = await page.getTextContent();
-        let text = textContent.items.map(item => item.str).join(" ");
+function getField(text,label){
+  const regex = new RegExp(label+'\\s*\\n?\\s*(.*)');
+  const match = text.match(regex);
+  return match ? match[1].trim() : '';
+}
 
-        // CLEAN TEXT
-        text = text.replace(/\s+/g, " ");
+// Image upload once + delete
+document.getElementById('imgFile').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(){
+    uploadedImage = reader.result;
+    renderImageControls();
+  };
+  reader.readAsDataURL(file);
+});
 
-        // AUTO EXTRACT FIELDS
-        const data = {
-            name: find(text, /(Name|नाम)[^:]*:\s*([A-Za-z\u0900-\u097F ]+)/),
-            epic: find(text, /(EPIC|EPIC No|ईपीआईसी)[^:]*:\s*([A-Z0-9]+)/),
-            age: find(text, /(Age|आयु)[^:]*:\s*([0-9]+)/),
-            gender: find(text, /(Gender|लिंग)[^:]*:\s*([A-Za-z\u0900-\u097F]+)/),
-            father: find(text, /(Father|Husband|पति|पिता)[^:]*:\s*([A-Za-z\u0900-\u097F ]+)/),
-            house: find(text, /(House|घर)[^:]*:\s*([A-Za-z0-9-]+)/),
-            serial: find(text, /(Serial|क्रमांक)[^:]*:\s*([0-9]+)/),
-            polling: find(text, /(Polling|Booth|मतदान केंद्र)[^:]*:\s*([A-Za-z\u0900-\u097F 0-9,.-]+)/)
-        };
+function renderImageControls(){
+  const controls = document.getElementById('image-controls');
+  controls.innerHTML = '';
+  if(uploadedImage){
+    const img = document.createElement('img');
+    img.src = uploadedImage;
+    img.style.width = '100px';
+    img.style.border = '1px solid #ccc';
+    img.style.marginTop = '5px';
+    controls.appendChild(img);
 
-        // MAKE CARD
-        let card = `
-        <div class="card">
-            <b>Name:</b> ${data.name}<br>
-            <b>EPIC:</b> ${data.epic}<br>
-            <b>Father/Husband:</b> ${data.father}<br>
-            <b>Age:</b> ${data.age}<br>
-            <b>Gender:</b> ${data.gender}<br>
-            <b>House No:</b> ${data.house}<br>
-            <b>Serial No:</b> ${data.serial}<br><br>
-            <b>Polling Address:</b><br> ${data.polling}
-        </div>
-        `;
-
-        document.getElementById("printArea").innerHTML = card;
-        document.getElementById("printBtn").style.display = "inline-block";
-        document.getElementById("waBtn").style.display = "inline-block";
+    const delBtn = document.createElement('button');
+    delBtn.innerText = 'Delete Image';
+    delBtn.className = 'btn';
+    delBtn.onclick = function(){
+      uploadedImage = null;
+      document.getElementById('imgFile').value = '';
+      controls.innerHTML = '';
+      document.getElementById('preview').innerHTML = '';
     };
-
-    reader.readAsArrayBuffer(file);
+    controls.appendChild(delBtn);
+  }
 }
 
-// REGEX Extract Helper
-function find(text, regex) {
-    const match = text.match(regex);
-    return match ? match[2] : "Not Found";
+// Merge & Preview
+function generatePreview(){
+  if(!uploadedImage){
+    alert("Please upload image first!");
+    return;
+  }
+  const previewDiv = document.getElementById('preview');
+  previewDiv.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = 'print-area';
+  div.innerHTML = `
+    <strong>Voter Information</strong><br>
+    First Name: ${extractedData.firstName}<br>
+    Last Name: ${extractedData.lastName}<br>
+    Relative First: ${extractedData.relativeFirst}<br>
+    Relative Last: ${extractedData.relativeLast}<br>
+    Age: ${extractedData.age}<br>
+    Gender: ${extractedData.gender}<br>
+    EPIC No: ${extractedData.epic}<br>
+    Polling Station: ${extractedData.pollingStation}<br>
+    Part Number: ${extractedData.partNumber}<br>
+    Part Serial: ${extractedData.partSerial}<br>
+  `;
+  if(uploadedImage){
+    const img = document.createElement('img');
+    img.src = uploadedImage;
+    div.appendChild(img);
+  }
+  previewDiv.appendChild(div);
+
+  // Download merged PDF
+  document.getElementById('downloadBtn').onclick = async function(){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'mm', format:[50,200] }); // 2-inch width approx
+    let y = 5;
+    for(const key in extractedData){
+      doc.text(`${key}: ${extractedData[key]}`,5,y);
+      y += 5;
+    }
+    if(uploadedImage){
+      const imgProps = await new Promise(resolve=>{
+        const img = new Image();
+        img.onload = ()=>resolve({ img, width: img.width, height: img.height });
+        img.src = uploadedImage;
+      });
+      const ratio = imgProps.width / imgProps.height;
+      const imgWidth = 45; // mm for 2 inch
+      const imgHeight = imgWidth / ratio;
+      doc.addImage(uploadedImage,'JPEG',5,y,imgWidth,imgHeight);
+    }
+    doc.save('voter_merged.pdf');
+  };
+
+  // WhatsApp
+  document.getElementById('whatsappBtn').onclick = function(){
+    const text = encodeURIComponent(
+`Voter Info:
+First Name: ${extractedData.firstName}
+Last Name: ${extractedData.lastName}
+Relative First: ${extractedData.relativeFirst}
+Relative Last: ${extractedData.relativeLast}
+Age: ${extractedData.age}
+Gender: ${extractedData.gender}
+EPIC No: ${extractedData.epic}
+Polling Station: ${extractedData.pollingStation}`
+    );
+    window.open(`https://wa.me/?text=${text}`);
+  };
 }
 
-// WhatsApp Send
-function sendWA() {
-    const card = document.getElementById("printArea").innerText;
-    window.open("https://wa.me/?text=" + encodeURIComponent(card), "_blank");
+// Print
+function printContent(){
+  if(!uploadedImage){
+    alert("Please upload image first!");
+    return;
+  }
+  const printWindow = window.open('', '', 'width=220,height=600');
+  printWindow.document.write('<html><head><title>Print</title></head><body>');
+  printWindow.document.write(document.querySelector('.print-area').outerHTML);
+  printWindow.document.write('</body></html>');
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
 }
 </script>
-
 </body>
 </html>
