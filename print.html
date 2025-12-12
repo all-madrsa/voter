@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Voter Slip Extract & PDF</title>
 <style>
-body {font-family: Arial, sans-serif; display:flex; flex-direction:column; align-items:center; padding:10px;}
+body {font-family: Arial,sans-serif; display:flex; flex-direction:column; align-items:center; padding:10px;}
 input, button {margin:5px; padding:8px; font-size:14px;}
-#preview {border:1px solid #ccc; padding:10px; margin-top:20px; width:350px;}
+#preview {border:1px solid #ccc; padding:10px; margin-top:20px; width:400px;}
 .slip-row {margin-bottom:5px; font-size:14px;}
 #voterImg {width:80px; height:80px; object-fit:cover; margin-top:10px;}
 .btn3d {padding:8px 15px; font-size:12px; border-radius:8px; color:#fff; cursor:pointer; border:none; background:linear-gradient(145deg,#3498db,#2980b9); box-shadow:0 3px 0 #1c5980,0 4px 8px rgba(0,0,0,0.4);}
@@ -42,6 +42,7 @@ document.getElementById('imgFile').addEventListener('change', function(){
     reader.onload = e => {
         voterImg = e.target.result;
         localStorage.setItem('voterImage', voterImg);
+        mergePreview();
     };
     reader.readAsDataURL(this.files[0]);
 });
@@ -70,44 +71,28 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
         fullText += strings.join('\n') + '\n';
     }
 
-    // Split lines and trim
-    const lines = fullText.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+    // Normalize lines
+    const lines = fullText.split(/\r?\n/).map(l => l.trim()).filter(l => l);
 
-    extracted = {}; // reset
+    // Reset extracted
+    extracted = {};
 
-    lines.forEach(line=>{
-        if(line.toLowerCase().includes('name:') && !line.toLowerCase().includes("husband")){
-            const val = line.split(':')[1]?.trim();
-            if(val){
-                const parts = val.split(' ');
-                extracted.firstName = parts[0];
-                extracted.lastName = parts.slice(1).join(' ');
-            }
-        }
-        else if(line.toLowerCase().includes("husband's name:")){
-            extracted.husbandName = line.split(':')[1]?.trim();
-        }
-        else if(line.toLowerCase().includes('date of birth') || line.toLowerCase().includes('dob')){
-            extracted.dob = line.split(':')[1]?.trim();
-        }
-        else if(line.toLowerCase().includes('epic')){
-            extracted.epic = line.split(':')[1]?.trim();
-        }
-        else if(line.toLowerCase().includes('serial no')){
-            extracted.serial = line.split(':')[1]?.trim();
-        }
-        else if(line.toLowerCase().includes('part no')){
-            extracted.partNo = line.split(':')[1]?.trim();
-        }
-        else if(line.toLowerCase().includes('assembly constituency')){
-            extracted.constituency = line.split(':')[1]?.trim();
-        }
-        else if(line.toLowerCase().includes('polling station')){
-            extracted.polling = line.split(':')[1]?.trim();
-        }
+    // Map all required fields
+    lines.forEach(line => {
+        if(line.match(/Name\s*:/i)) extracted.firstName = line.split(':')[1].trim();
+        else if(line.match(/Husband's Name/i)) extracted.husbandName = line.split(':')[1].trim();
+        else if(line.match(/Date of Birth|Age/i)) extracted.dob = line.split(':')[1].trim();
+        else if(line.match(/EPIC/i)) extracted.epic = line.split(':')[1].trim();
+        else if(line.match(/Serial/i)) extracted.serial = line.split(':')[1].trim();
+        else if(line.match(/Part No/i)) extracted.partNo = line.split(':')[1].trim();
+        else if(line.match(/Assembly Constituency/i)) extracted.constituency = line.split(':')[1].trim();
+        else if(line.match(/Polling Station/i)) extracted.polling = line.split(':')[1].trim();
+        else if(line.match(/Gender/i)) extracted.gender = line.split(':')[1].trim();
+        else if(line.match(/Address/i)) extracted.address = line.split(':')[1].trim();
     });
 
     alert('PDF text extracted successfully!');
+    mergePreview();
 });
 
 // Preview extracted data
@@ -118,7 +103,7 @@ function mergePreview(){
         if(extracted[key]){
             const row = document.createElement('div');
             row.className = 'slip-row';
-            row.textContent = `${key}: ${extracted[key]}`;
+            row.innerHTML = `${key}: ${extracted[key]}`;
             div.appendChild(row);
         }
     }
@@ -145,7 +130,7 @@ async function downloadPDF(){
     }
     const savedImg = localStorage.getItem('voterImage');
     if(savedImg){
-        doc.addImage(savedImg, 'JPEG', 10, y, 40, 40);
+        doc.addImage(savedImg, 'JPEG', 10, y, 50, 50);
     }
     doc.save('voter-slip.pdf');
 }
