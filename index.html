@@ -12,12 +12,11 @@
     <button id="loginBtn" class="btn3d login-btn">Login</button>
   </div>
 
-<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 
-<!-- Firebase config -->
 <script>
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyD7x6epAwfshYNzc4G8JvmE4Bu3UNdMB5U",
   authDomain: "nikah-c234b.firebaseapp.com",
@@ -30,8 +29,14 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-</script>
 
-<script src="script.js"></script>
+// Login button
+const loginBtn = document.getElementById('loginBtn');
+loginBtn.addEventListener('click', () => {
+  auth.signInAnonymously().then(() => {
+    window.location.href = 'dashboard.html';
+  }).catch(err => alert(err.message));
+});
+</script>
 </body>
 </html>
