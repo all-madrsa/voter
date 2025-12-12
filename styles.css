@@ -1,0 +1,39 @@
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+#header {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  height: 50px;
+  background: #222;
+  color: white;
+  text-align: center;
+  line-height: 50px;
+  font-size: 18px;
+  z-index: 10;
+}
+
+#footer {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  height: 60px;
+  background: #222;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 10;
+}
+
+#iframe {
+  position: absolute;
+  top: 50px;
+  bottom: 60px;
+  width: 100%;
+  border: none;
+}
