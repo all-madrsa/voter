@@ -47,13 +47,13 @@ body, html {
   top: 10px;
   right: 10px;
   background-color: #e74c3c;
-  border-radius: 50% 50% 50% 0; /* cone-ish */
+  border-radius: 50% 50% 50% 0;
   width: 60px;
   height: 40px;
   font-size: 12px;
 }
 
-/* Dashboard buttons */
+/* Dashboard buttons container */
 .button-container {
   display: flex;
   flex-direction: column;
