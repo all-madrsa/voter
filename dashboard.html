@@ -6,7 +6,8 @@
 <title>Dashboard</title>
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
+
+<body class="dash-bg">
 
 <!-- Logout -->
 <button id="logoutBtn" class="btn3d logout-btn">Logout</button>
@@ -14,9 +15,13 @@
 <!-- Main Buttons -->
 <div class="button-container">
   <button class="btn3d color-btn" onclick="window.open('https://electoralsearch.eci.gov.in/', '_blank')">Election Search</button>
+
   <button class="btn3d color-btn" onclick="window.open('https://mahasecvoterlist.in/ObjectionOnClick/SearchVoterName', '_blank')">Voter Name Search</button>
+
   <button class="btn3d color-btn" onclick="openCloudinaryUpload()">Upload Image</button>
-  <button class="btn3d blinking" onclick="window.print()">Print Page</button>
+
+  <!-- Print → New Page With Buttons -->
+  <button class="btn3d blinking" onclick="openPrintWindow()">Print Page</button>
 </div>
 
 <!-- Uploaded images -->
@@ -26,6 +31,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 
 <script>
+/* Firebase Config */
 const firebaseConfig = {
   apiKey: "AIzaSyD7x6epAwfshYNzc4G8JvmE4Bu3UNdMB5U",
   authDomain: "nikah-c234b.firebaseapp.com",
@@ -39,30 +45,34 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 
-// Redirect if not logged in
+/* Redirect if not logged in */
 auth.onAuthStateChanged(user => {
   if(!user) window.location.href = 'index.html';
 });
 
-// Logout
+/* Logout */
 document.getElementById('logoutBtn').addEventListener('click', () => {
   auth.signOut().then(() => window.location.href='index.html');
 });
 
-// Cloudinary Upload
+/* Cloudinary Upload */
 function openCloudinaryUpload(){
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
   fileInput.accept = 'image/*';
+
   fileInput.onchange = () => {
     const file = fileInput.files[0];
     if(!file) return;
-    const cloudName = 'YOUR_CLOUD_NAME'; // Replace with your Cloudinary cloud name
+
+    const cloudName = 'YOUR_CLOUD_NAME'; 
     const unsignedUploadPreset = 'dlsqxs7zl';
     const url = `https://api.cloudinary.com/v1_1/${cloudName}/upload`;
     const formData = new FormData();
+
     formData.append('file', file);
     formData.append('upload_preset', unsignedUploadPreset);
+
     fetch(url, { method: 'POST', body: formData })
       .then(res => res.json())
       .then(data => {
@@ -75,12 +85,38 @@ function openCloudinaryUpload(){
           img.style.objectFit = 'cover';
           img.style.borderRadius = '10px';
           imagesDiv.appendChild(img);
-        } else alert("Upload failed");
+        } else {
+          alert("Upload failed");
+        }
       })
       .catch(err => alert(err));
   };
+
   fileInput.click();
 }
+
+/* Open new print page with 4 buttons */
+function openPrintWindow(){
+  const win = window.open("", "_blank");
+
+  win.document.write(`
+    <html>
+    <head>
+      <title>Print Page</title>
+      <link rel="stylesheet" href="style.css">
+    </head>
+    <body class="dash-bg" style="display:flex; justify-content:center; align-items:center;">
+      <div class="button-container">
+        <button class="btn3d blinking">Button A</button>
+        <button class="btn3d">Button B</button>
+        <button class="btn3d">Button C</button>
+        <button class="btn3d">Button D</button>
+      </div>
+    </body>
+    </html>
+  `);
+}
 </script>
+
 </body>
 </html>
