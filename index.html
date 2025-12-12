@@ -12,8 +12,26 @@
     <button id="loginBtn" class="btn3d login-btn">Login</button>
   </div>
 
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+
+<!-- Firebase config -->
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyD7x6epAwfshYNzc4G8JvmE4Bu3UNdMB5U",
+  authDomain: "nikah-c234b.firebaseapp.com",
+  databaseURL: "https://nikah-c234b-default-rtdb.firebaseio.com",
+  projectId: "nikah-c234b",
+  storageBucket: "nikah-c234b.appspot.com",
+  messagingSenderId: "760906560668",
+  appId: "1:760906560668:web:0a2c16a47aeaec26482959",
+  measurementId: "G-ENL0FZPEEF"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+</script>
+
 <script src="script.js"></script>
 </body>
 </html>
