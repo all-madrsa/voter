@@ -1,76 +1,52 @@
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyD7x6epAwfshYNzc4G8JvmE4Bu3UNdMB5U",
-  authDomain: "nikah-c234b.firebaseapp.com",
-  databaseURL: "https://nikah-c234b-default-rtdb.firebaseio.com",
-  projectId: "nikah-c234b",
-  storageBucket: "nikah-c234b.appspot.com",
-  messagingSenderId: "760906560668",
-  appId: "1:760906560668:web:0a2c16a47aeaec26482959",
-  measurementId: "G-ENL0FZPEEF"
-};
+/* Open new print page with 4 buttons */
+function openPrintWindow(){
+  const win = window.open("", "_blank");
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
+  win.document.write(`
+    <html>
+    <head>
+      <title>Print Page</title>
+      <link rel="stylesheet" href="style.css">
+      <style>
+        /* Mini Logout Button for print page */
+        .print-logout {
+          position: fixed;
+          top: 15px;
+          right: 15px;
+          padding: 6px 14px;
+          font-size: 11px;
+          border-radius: 8px;
+          background: linear-gradient(145deg,#ff6666,#cc0000);
+          box-shadow: 0 4px #990000;
+          color: white;
+          cursor: pointer;
+          border: none;
+          z-index: 9999;
+        }
+        .print-logout:active {
+          transform: translateY(2px);
+          box-shadow: 0 2px #990000;
+        }
+      </style>
+    </head>
 
-// ----- Login Page -----
-const loginBtn = document.getElementById('loginBtn');
-if(loginBtn){
-  loginBtn.addEventListener('click', () => {
-    // Simple anonymous login for demo
-    auth.signInAnonymously().then(() => {
-      window.location.href = 'dashboard.html';
-    }).catch(err => alert(err.message));
-  });
-}
+    <body class="dash-bg" style="display:flex; justify-content:center; align-items:center; height:100vh;">
 
-// ----- Dashboard Page -----
-const logoutBtn = document.getElementById('logoutBtn');
-if(logoutBtn){
-  logoutBtn.addEventListener('click', () => {
-    auth.signOut().then(() => {
-      window.location.href = 'index.html';
-    });
-  });
-}
+      <!-- TOP RIGHT LOGOUT BUTTON -->
+      <button class="print-logout" onclick="window.location.href='index.html'">Logout</button>
 
-// ----- 4 Colorful Buttons -----
-function openLink(button){
-  const link = prompt("Enter URL for this button:");
-  if(link) window.open(link, "_blank");
-}
+      <!-- 4 Main Buttons -->
+      <div class="button-container">
+        <button class="btn3d blinking" onclick="window.open('https://mahasecvoterlist.in/ObjectionOnClick/SearchVoterName','_blank')">Download</button>
 
-// ----- Cloudinary Upload -----
-function openCloudinaryUpload(){
-  const fileInput = document.createElement('input');
-  fileInput.type = 'file';
-  fileInput.accept = 'image/*';
-  fileInput.onchange = () => {
-    const file = fileInput.files[0];
-    if(!file) return;
+        <button class="btn3d" onclick="window.open('https://electoralsearch.eci.gov.in/','_blank')">Election Search</button>
 
-    const cloudName = 'YOUR_CLOUD_NAME'; // Replace with your Cloud Name
-    const unsignedUploadPreset = 'dlsqxs7zl';
+        <button class="btn3d" onclick="window.location.href='pdf.html'">Whatsapp Send</button>
 
-    const url = `https://api.cloudinary.com/v1_1/${cloudName}/upload`;
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', unsignedUploadPreset);
+        <button class="btn3d" onclick="window.print()">Print</button>
+      </div>
 
-    fetch(url, { method: 'POST', body: formData })
-    .then(res => res.json())
-    .then(data => {
-      if(data.secure_url){
-        const imagesDiv = document.getElementById('images');
-        const img = document.createElement('img');
-        img.src = data.secure_url;
-        imagesDiv.appendChild(img);
-      } else {
-        alert("Upload failed");
-      }
-    })
-    .catch(err => alert(err));
-  };
-  fileInput.click();
+    </body>
+    </html>
+  `);
 }
