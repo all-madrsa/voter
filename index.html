@@ -8,7 +8,9 @@
 </head>
 <body>
   <div class="login-page">
-    <img src="assets/bg.jpg" alt="Background" class="bg-image">
+    <!-- Updated Background Image -->
+    <img src="https://i.ibb.co/fVzDLVT6/Chat-GPT-Image-Dec-12-2025-01-07-19-PM.png" 
+         alt="Background" class="bg-image">
     <button id="loginBtn" class="btn3d login-btn">Login with Google</button>
   </div>
 
@@ -36,7 +38,6 @@ loginBtn.addEventListener('click', () => {
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider)
     .then((result) => {
-      // Successfully signed in
       window.location.href = 'dashboard.html';
     })
     .catch(err => alert(err.message));
