@@ -3,15 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PDF + Image Merge & Print</title>
+<title>PDF + Image Merge Tool</title>
+<link rel="stylesheet" href="style.css">
 <style>
-body { font-family: Arial; background: #f1f1f1; padding: 20px; }
-h2 { text-align: center; margin-bottom: 20px; }
-input { margin: 10px 0; display:block; }
-#preview { margin-top: 20px; border:1px solid #ccc; padding:10px; background:#fff; }
-img.preview-img { width:150px; height:150px; object-fit:cover; display:block; margin:10px auto; }
-button { margin: 10px; padding:10px 20px; font-size:16px; cursor:pointer; }
-#pdfData { margin-top:10px; font-size:14px; line-height:1.4; white-space:pre-wrap; }
+body {font-family:Arial,sans-serif; display:flex; flex-direction:column; align-items:center; padding:10px;}
+input, button {margin:10px; padding:10px;}
+#preview img {max-width:150px; max-height:150px; border-radius:10px; margin-top:10px;}
+.btn3d {padding:15px 50px; font-size:18px; border-radius:12px; color:#fff; cursor:pointer; border:none; background:linear-gradient(145deg,#3498db,#2980b9); box-shadow:0 5px 0 #1c5980,0 8px 15px rgba(0,0,0,0.4);}
+.btn3d:active {transform:translateY(5px); box-shadow:0 2px 0 #1c5980,0 4px 8px rgba(0,0,0,0.4);}
+#imagesList {display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;}
+.img-box {position:relative;}
+.delete-btn {position:absolute; top:0; right:0; background:red; color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer;}
 </style>
 </head>
 <body>
@@ -19,139 +21,159 @@ button { margin: 10px; padding:10px 20px; font-size:16px; cursor:pointer; }
 <h2>PDF + Image Merge Tool</h2>
 
 <label>Select PDF File:</label>
-<input type="file" id="pdfFile" accept=".pdf">
-
+<input type="file" id="pdfFile" accept="application/pdf">
 <label>Select Image File:</label>
-<input type="file" id="imageFile" accept="image/*">
+<input type="file" id="imgFile" accept="image/*">
+<div id="imagesList"></div>
 
-<button id="mergeBtn">Merge PDF + Image</button>
+<button class="btn3d" onclick="mergeAndPrint()">Print</button>
+<button class="btn3d" onclick="downloadMerged()">Download</button>
+<button class="btn3d" onclick="sendWhatsApp()">WhatsApp Send</button>
 
-<div id="preview">
-    <canvas id="pdfCanvas" style="display:none;"></canvas>
-    <img id="imgPreview" class="preview-img">
-    <div id="pdfData"></div>
-    <button id="printBtn">Print</button>
-    <button id="downloadBtn">Download</button>
-    <button id="whatsappBtn">WhatsApp Send</button>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.10.111/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
-let pdfFile, imageFile, extractedData;
+const { jsPDF } = window.jspdf;
+let pdfData = null;
+let imgData = null;
 
-// Load PDF
-document.getElementById('pdfFile').addEventListener('change', e => {
-    pdfFile = e.target.files[0];
+// Load saved image from localStorage if exists
+let savedImage = localStorage.getItem('mergedImage');
+if(savedImage){
+    displayImage(savedImage);
+}
+
+// PDF extract
+document.getElementById('pdfFile').addEventListener('change', async function(){
+    const file = this.files[0];
+    if(!file) return;
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+    let fullText = '';
+    for(let i=1;i<=pdf.numPages;i++){
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items.map(item=>item.str).join(' ');
+        fullText += pageText + '\n';
+    }
+    pdfData = extractFields(fullText);
+    alert("PDF processed successfully!");
 });
 
-// Load Image
-document.getElementById('imageFile').addEventListener('change', e => {
-    imageFile = e.target.files[0];
-    const imgPreview = document.getElementById('imgPreview');
-    imgPreview.src = URL.createObjectURL(imageFile);
+// Image upload and save
+document.getElementById('imgFile').addEventListener('change', function(){
+    const file = this.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e){
+        imgData = e.target.result;
+        localStorage.setItem('mergedImage', imgData); // save
+        displayImage(imgData);
+    };
+    reader.readAsDataURL(file);
 });
 
-// Merge PDF + Image
-document.getElementById('mergeBtn').addEventListener('click', async () => {
-    if(!pdfFile){ alert("Please select a PDF"); return; }
+function displayImage(src){
+    const div = document.getElementById('imagesList');
+    div.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'img-box';
+    const img = document.createElement('img');
+    img.src = src;
+    img.style.width = '150px';
+    img.style.height = '150px';
+    img.style.objectFit = 'cover';
+    const del = document.createElement('button');
+    del.innerText = 'X';
+    del.className = 'delete-btn';
+    del.onclick = () => { localStorage.removeItem('mergedImage'); imgData=null; div.innerHTML=''; };
+    box.appendChild(img);
+    box.appendChild(del);
+    div.appendChild(box);
+}
 
-    // Extract PDF text
-    const pdfData = await extractPDFText(pdfFile);
-    extractedData = extractFields(pdfData);
-    document.getElementById('pdfData').textContent = formatData(extractedData);
-});
+// Extract required fields
+function extractFields(text){
+    const fields = {};
+    fields.firstName = matchField(text, /First Name:\s*(.*)/i);
+    fields.lastName = matchField(text, /Last Name:\s*(.*)/i);
+    fields.relativeFirst = matchField(text, /Relative First:\s*(.*)/i);
+    fields.relativeLast = matchField(text, /Relative Last:\s*(.*)/i);
+    fields.age = matchField(text, /Age:\s*(.*)/i);
+    fields.gender = matchField(text, /Gender:\s*(.*)/i);
+    fields.epic = matchField(text, /EPIC No:\s*(.*)/i);
+    fields.state = matchField(text, /State:\s*(.*)/i);
+    fields.parliamentary = matchField(text, /Parliamentary Constituency:\s*(.*)/i);
+    fields.assembly = matchField(text, /Assembly Constituency:\s*(.*)/i);
+    fields.polling = matchField(text, /Polling Station:\s*(.*)/i);
+    fields.partNumber = matchField(text, /Part Number:\s*(.*)/i);
+    fields.partSerial = matchField(text, /Part Serial:\s*(.*)/i);
+    fields.pollingDate = matchField(text, /Polling Date:\s*(.*)/i);
+    return fields;
+}
 
-// Print
-document.getElementById('printBtn').addEventListener('click', () => {
-    if(!extractedData) return alert("Merge PDF + Image first");
-    const doc = new jspdf.jsPDF({
-        unit:'mm',
-        format:[50,200] // 2 inch width, height flexible
-    });
+function matchField(text, regex){
+    const m = text.match(regex);
+    return m ? m[1].trim() : '';
+}
 
+// Merge and print
+async function mergeAndPrint(){
+    if(!pdfData){ alert("Upload PDF first"); return;}
+    const doc = new jsPDF({unit:'mm', format:[50,200]}); // 2 inch width approx
     let y = 5;
-    for(const key in extractedData){
-        if(extractedData[key]) {
-            doc.text(`${key}: ${extractedData[key]}`,5,y);
-            y += 5;
-        }
+    for(const [key,val] of Object.entries(pdfData)){
+        doc.text(`${key.replace(/([A-Z])/g, ' $1')}: ${val}`, 5, y);
+        y += 5;
     }
-
-    if(imageFile){
-        const img = document.getElementById('imgPreview');
-        doc.addImage(img, 'JPEG',5,y,40,40); // width 40mm height 40mm
+    if(imgData){
+        const img = new Image();
+        img.src = imgData;
+        await new Promise(r=>img.onload=r);
+        doc.addImage(imgData, 'JPEG', 5, y, 40, 40); // image below voter info
     }
-
     doc.autoPrint();
-    window.open(doc.output('bloburl'), '_blank');
-});
+    window.open(doc.output('bloburl'),'_blank');
+}
 
-// Download
-document.getElementById('downloadBtn').addEventListener('click', () => {
-    if(!extractedData) return alert("Merge PDF + Image first");
-    const doc = new jspdf.jsPDF({unit:'mm', format:[50,200]});
+// Download merged PDF
+async function downloadMerged(){
+    if(!pdfData){ alert("Upload PDF first"); return;}
+    const doc = new jsPDF({unit:'mm', format:[50,200]});
     let y = 5;
-    for(const key in extractedData){
-        if(extractedData[key]) {
-            doc.text(`${key}: ${extractedData[key]}`,5,y);
-            y += 5;
-        }
+    for(const [key,val] of Object.entries(pdfData)){
+        doc.text(`${key.replace(/([A-Z])/g, ' $1')}: ${val}`, 5, y);
+        y += 5;
     }
-    if(imageFile){
-        const img = document.getElementById('imgPreview');
-        doc.addImage(img, 'JPEG',5,y,40,40);
+    if(imgData){
+        const img = new Image();
+        img.src = imgData;
+        await new Promise(r=>img.onload=r);
+        doc.addImage(imgData, 'JPEG', 5, y, 40, 40);
     }
-    doc.save('voter_merge.pdf');
-});
+    doc.save('Voter-Info.pdf');
+}
 
 // WhatsApp send
-document.getElementById('whatsappBtn').addEventListener('click', () => {
-    if(!extractedData) return alert("Merge PDF + Image first");
-    alert("For WhatsApp send, please download PDF first and send manually (WhatsApp Web or App).");
-});
-
-// ---------------- Helper Functions ----------------
-async function extractPDFText(file){
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({data:arrayBuffer}).promise;
-    let textContent = '';
-    for(let i=0;i<pdf.numPages;i++){
-        const page = await pdf.getPage(i+1);
-        const txt = await page.getTextContent();
-        textContent += txt.items.map(t=>t.str).join(' ') + '\n';
+async function sendWhatsApp(){
+    if(!pdfData){ alert("Upload PDF first"); return;}
+    const doc = new jsPDF({unit:'mm', format:[50,200]});
+    let y = 5;
+    for(const [key,val] of Object.entries(pdfData)){
+        doc.text(`${key.replace(/([A-Z])/g, ' $1')}: ${val}`, 5, y);
+        y += 5;
     }
-    return textContent;
-}
-
-function extractFields(text){
-    function getField(text,label){
-        const regex = new RegExp(label + '\\s*:?\\s*(.*?)\\s*(?=\\n|$)','i');
-        const match = text.match(regex);
-        return match? match[1].trim() : '';
+    if(imgData){
+        const img = new Image();
+        img.src = imgData;
+        await new Promise(r=>img.onload=r);
+        doc.addImage(imgData, 'JPEG', 5, y, 40, 40);
     }
-
-    return {
-        'First Name': getField(text,'पहिले नाव / First Name'),
-        'Last Name': getField(text,'आडनाव / Last Name'),
-        "Relative First": getField(text,"नातेवाईकाचे पहिले नाव / Relative's First Name"),
-        "Relative Last": getField(text,"नातेवाईकाचे आडनाव / Relative's Last Name"),
-        'Age': getField(text,'वय / Age'),
-        'Gender': getField(text,'लिंग / Gender'),
-        'EPIC No': getField(text,'EPIC क्रमांक / EPIC No'),
-        'State': getField(text,'राज्य / State'),
-        'Parliamentary Constituency': getField(text,'संसदीय मतदारसंघ क्रमांक- संसदीय मतदारसंघाचे नाव / Parliamentary Constituency Number - Parliamentary Constituency Name'),
-        'Assembly Constituency': getField(text,'विधानसभा मतदारसंघ क्रमांक- विधानसभा मतदारसंघाचे Name / Assembly Constituency Number-Assembly Constituency Name'),
-        'Polling Station': getField(text,'मतदान केंद्र / Polling Station'),
-        'Part Number': getField(text,'भाग क्रमांक-भागाचे नाव / Part Number- Part Name'),
-        'Part Serial': getField(text,'भाग अनुक्रम क्रमांक/ Part Serial Number'),
-        'Polling Date': getField(text,'मतदानाची तारीख / Polling Date')
-    };
-}
-
-function formatData(data){
-    return Object.entries(data).map(([k,v])=>`${k}: ${v}`).join('\n');
+    const blob = doc.output('blob');
+    const file = new File([blob], 'VoterInfo.pdf', {type:'application/pdf'});
+    const url = URL.createObjectURL(file);
+    window.open(`https://wa.me/?text=Voter Info PDF: ${url}`, '_blank');
 }
 </script>
 </body>
