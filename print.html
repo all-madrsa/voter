@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PDF + Image Mini Printer</title>
-<link rel="stylesheet" href="style.css">
+<title>PDF + Image Merge Tool</title>
 <style>
-body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 10px; }
-input, button { margin: 10px; padding: 10px; }
-#imagesList img { max-width:150px; max-height:150px; border-radius:10px; margin-top:10px; }
-.btn3d { padding: 15px 50px; font-size: 16px; border-radius: 12px; color: #fff; cursor: pointer; border: none; background: linear-gradient(145deg,#3498db,#2980b9); box-shadow: 0 5px 0 #1c5980,0 8px 15px rgba(0,0,0,0.4);}
-.btn3d:active { transform: translateY(5px); box-shadow: 0 2px 0 #1c5980,0 4px 8px rgba(0,0,0,0.4);}
+body {font-family: Arial, sans-serif; display:flex; flex-direction:column; align-items:center; padding:10px;}
+input, button {margin:10px; padding:10px;}
+#preview {border:1px solid #ccc; padding:10px; margin-top:20px; width:120px; height:auto; display:flex; flex-direction:column; align-items:center;}
+#preview img {width:100%; height:100%; object-fit:cover;}
+.btn3d {padding:15px 30px; font-size:16px; border-radius:12px; color:#fff; cursor:pointer; border:none; background:linear-gradient(145deg,#3498db,#2980b9); box-shadow:0 5px 0 #1c5980,0 8px 15px rgba(0,0,0,0.4);}
+.btn3d:active {transform:translateY(5px); box-shadow:0 2px 0 #1c5980,0 4px 8px rgba(0,0,0,0.4);}
 #imagesList {display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;}
 .img-box {position:relative;}
 .delete-btn {position:absolute; top:0; right:0; background:red; color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer;}
@@ -18,76 +18,50 @@ input, button { margin: 10px; padding: 10px; }
 </head>
 <body>
 
-<h2>PDF + Image Mini Printer Tool</h2>
+<h2>PDF + Image Merge Tool</h2>
 
 <label>Select PDF File:</label>
 <input type="file" id="pdfFile" accept="application/pdf">
 
 <label>Select Image File (Save Once):</label>
 <input type="file" id="imgFile" accept="image/*">
-
 <div id="imagesList"></div>
 
-<button class="btn3d" onclick="mergeAndPrint()">Print</button>
-<button class="btn3d" onclick="downloadMerged()">Download</button>
+<button class="btn3d" onclick="mergePreview()">Merge & Preview</button>
+<button class="btn3d" onclick="printDoc()">Print</button>
+<button class="btn3d" onclick="downloadDoc()">Download</button>
 <button class="btn3d" onclick="sendWhatsApp()">WhatsApp Send</button>
+
+<h3>Preview:</h3>
+<div id="preview"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
 const { jsPDF } = window.jspdf;
-let pdfCanvasImg = null;
+let pdfPages = [];
 let imgData = null;
 
-// Load saved image from localStorage
+// Load saved image
 const savedImage = localStorage.getItem('voterImage');
-if(savedImage){
-    imgData = savedImage;
-    displayImage(imgData);
-}
+if(savedImage){ imgData = savedImage; displayImage(imgData); }
 
-// Display uploaded image
-function displayImage(src){
-    const div = document.getElementById('imagesList');
-    div.innerHTML = '';
-    const box = document.createElement('div');
-    box.className = 'img-box';
-    const img = document.createElement('img');
-    img.src = src;
-    img.style.width='150px';
-    img.style.height='150px';
-    img.style.objectFit='cover';
-    const del = document.createElement('button');
-    del.innerText='X';
-    del.className='delete-btn';
-    del.onclick = () => { localStorage.removeItem('voterImage'); imgData=null; div.innerHTML=''; };
-    box.appendChild(img);
-    box.appendChild(del);
-    div.appendChild(box);
-}
-
-// PDF Upload and render to image
 document.getElementById('pdfFile').addEventListener('change', async function(){
     const file = this.files[0];
     if(!file) return;
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-
-    const page = await pdf.getPage(1); // first page only (for mini printer)
-    const viewport = page.getViewport({ scale: 2 }); 
-    const canvas = document.createElement('canvas');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    const context = canvas.getContext('2d');
-
-    await page.render({canvasContext: context, viewport: viewport}).promise;
-
-    pdfCanvasImg = canvas.toDataURL('image/jpeg');
+    pdfPages = [];
+    for(let i=1;i<=pdf.numPages;i++){
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items.map(item=>item.str).join(' ');
+        pdfPages.push(pageText);
+    }
     alert("PDF processed successfully!");
 });
 
-// Image upload (save to localStorage)
 document.getElementById('imgFile').addEventListener('change', function(){
     const file = this.files[0];
     if(!file) return;
@@ -100,56 +74,88 @@ document.getElementById('imgFile').addEventListener('change', function(){
     reader.readAsDataURL(file);
 });
 
-// Merge PDF + Image and Print
-async function mergeAndPrint(){
-    if(!pdfCanvasImg){ alert("Upload PDF first"); return;}
-    const doc = new jsPDF({unit:'mm', format:[50,200]}); // 2 inch width
-    let y = 0;
-    doc.addImage(pdfCanvasImg,'JPEG',0,y,50,100); // adjust height if needed
-    y += 105;
-    if(imgData){
-        const img = new Image();
-        img.src = imgData;
-        await new Promise(r=>img.onload=r);
-        doc.addImage(imgData,'JPEG',0,y,50,50);
-    }
-    doc.autoPrint();
-    window.open(doc.output('bloburl'),'_blank');
+function displayImage(src){
+    const div = document.getElementById('imagesList');
+    div.innerHTML = '';
+    const box = document.createElement('div');
+    box.className='img-box';
+    const img=document.createElement('img');
+    img.src=src; img.style.width='150px'; img.style.height='150px';
+    const del = document.createElement('button');
+    del.innerText='X'; del.className='delete-btn';
+    del.onclick=()=>{ localStorage.removeItem('voterImage'); imgData=null; div.innerHTML=''; };
+    box.appendChild(img); box.appendChild(del); div.appendChild(box);
 }
 
-// Download merged PDF+Image
-async function downloadMerged(){
-    if(!pdfCanvasImg){ alert("Upload PDF first"); return;}
-    const doc = new jsPDF({unit:'mm', format:[50,200]});
-    let y = 0;
-    doc.addImage(pdfCanvasImg,'JPEG',0,y,50,100);
-    y += 105;
-    if(imgData){
-        const img = new Image();
-        img.src = imgData;
-        await new Promise(r=>img.onload=r);
-        doc.addImage(imgData,'JPEG',0,y,50,50);
+// Merge preview
+async function mergePreview(){
+    if(pdfPages.length===0){ alert("Upload PDF first"); return; }
+    const previewDiv = document.getElementById('preview');
+    previewDiv.innerHTML='';
+    // create canvas for jsPDF
+    const doc = new jsPDF({unit:'mm', format:[50,200]}); // 2 inch width
+    let y=5;
+    for(const pageText of pdfPages){
+        const lines = doc.splitTextToSize(pageText, 45);
+        for(const line of lines){
+            doc.text(line,5,y);
+            y+=4;
+            if(y>160){ doc.addPage(); y=5; }
+        }
     }
-    doc.save('VoterMerged.pdf');
+    if(imgData){
+        const img=new Image();
+        img.src=imgData;
+        await new Promise(r=>img.onload=r);
+        doc.addImage(imgData,'JPEG',5,y,40,40); // 2 inch x 2 inch approx
+    }
+    const dataUrl = doc.output('dataurlstring');
+    const imgPreview = document.createElement('img');
+    imgPreview.src=dataUrl;
+    previewDiv.appendChild(imgPreview);
+}
+
+// Print
+async function printDoc(){
+    const doc = await generateDoc();
+    if(doc) doc.autoPrint(); window.open(doc.output('bloburl'),'_blank');
+}
+
+// Download
+async function downloadDoc(){
+    const doc = await generateDoc();
+    if(doc) doc.save('Voter_Merged.pdf');
 }
 
 // WhatsApp send
 async function sendWhatsApp(){
-    if(!pdfCanvasImg){ alert("Upload PDF first"); return;}
-    const doc = new jsPDF({unit:'mm', format:[50,200]});
-    let y = 0;
-    doc.addImage(pdfCanvasImg,'JPEG',0,y,50,100);
-    y += 105;
-    if(imgData){
-        const img = new Image();
-        img.src = imgData;
-        await new Promise(r=>img.onload=r);
-        doc.addImage(imgData,'JPEG',0,y,50,50);
-    }
+    const doc = await generateDoc();
     const blob = doc.output('blob');
-    const file = new File([blob],'VoterMerged.pdf',{type:'application/pdf'});
+    const file = new File([blob],'Voter.pdf',{type:'application/pdf'});
     const url = URL.createObjectURL(file);
-    window.open(`https://wa.me/?text=Voter PDF & Image: ${url}`,'_blank');
+    window.open(`https://wa.me/?text=Voter PDF: ${url}`,'_blank');
+}
+
+// generate jsPDF
+async function generateDoc(){
+    if(pdfPages.length===0){ alert("Upload PDF first"); return null; }
+    const doc = new jsPDF({unit:'mm', format:[50,200]});
+    let y=5;
+    for(const pageText of pdfPages){
+        const lines = doc.splitTextToSize(pageText, 45);
+        for(const line of lines){
+            doc.text(line,5,y);
+            y+=4;
+            if(y>160){ doc.addPage(); y=5; }
+        }
+    }
+    if(imgData){
+        const img=new Image();
+        img.src=imgData;
+        await new Promise(r=>img.onload=r);
+        doc.addImage(imgData,'JPEG',5,y,40,40);
+    }
+    return doc;
 }
 </script>
 </body>
