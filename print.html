@@ -9,7 +9,7 @@ body {font-family: Arial,sans-serif; display:flex; flex-direction:column; align-
 h2 {margin-bottom:20px;}
 input, button {margin:10px; padding:10px;}
 #preview {border:1px solid #ccc; padding:10px; margin-top:20px; display:flex; flex-direction:column; align-items:center;}
-#preview img {margin-top:10px; object-fit:contain;}
+#preview img {margin-top:5px; object-fit:contain;}
 .btn3d {
     padding:15px 30px; font-size:16px; border-radius:12px;
     color:#fff; cursor:pointer; border:none;
@@ -63,7 +63,7 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
     pdfPages = [];
     for(let i=1;i<=pdf.numPages;i++){
         const page = await pdf.getPage(i);
-        const viewport = page.getViewport({scale:2}); // high res
+        const viewport = page.getViewport({scale:2});
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
         canvas.width = viewport.width;
@@ -108,7 +108,7 @@ function mergePreview(){
     pdfPages.forEach(pageData=>{
         const img = new Image();
         img.src = pageData;
-        img.style.width='120px'; // 2 inch approx
+        img.style.width='100%'; // fit preview width
         img.style.height='auto';
         previewDiv.appendChild(img);
     });
@@ -116,8 +116,9 @@ function mergePreview(){
     if(imgData){
         const img = new Image();
         img.src = imgData;
-        img.style.width='50px';
-        img.style.height='50px';
+        img.style.width='100%'; // full width under pdf
+        img.style.height='auto';
+        img.style.marginTop='5px';
         previewDiv.appendChild(img);
     }
 }
@@ -125,22 +126,22 @@ function mergePreview(){
 // Generate jsPDF for print/download/WhatsApp
 async function generateDoc(){
     if(pdfPages.length===0){ alert("Upload PDF first"); return null; }
-    const doc = new jsPDF({unit:'mm', format:[60,300]}); // pocket printer size adjust
+    const doc = new jsPDF({unit:'mm', format:[80, 300]}); // pocket printer approx 80mm width
     let y=5;
     for(const pageData of pdfPages){
         const img = new Image();
         img.src = pageData;
         await new Promise(r=>img.onload=r);
-        const pdfWidth = 55; // scale to fit paper width
+        const pdfWidth = 75; // scale to fit paper width
         const pdfHeight = (img.height * pdfWidth)/img.width;
-        doc.addImage(img,'JPEG',3,y,pdfWidth,pdfHeight);
-        y+=pdfHeight+5;
+        doc.addImage(img,'JPEG',5,y,pdfWidth,pdfHeight);
+        y+=pdfHeight+2;
     }
     if(imgData){
         const img = new Image();
         img.src = imgData;
         await new Promise(r=>img.onload=r);
-        doc.addImage(imgData,'JPEG',3,y,40,40);
+        doc.addImage(imgData,'JPEG',5,y,50,50); // fixed 2 inch size
     }
     return doc;
 }
