@@ -8,10 +8,11 @@
 </head>
 <body>
   <div class="login-page">
-    <!-- Updated Background Image -->
+    <!-- Background Image -->
     <img src="https://i.ibb.co/fVzDLVT6/Chat-GPT-Image-Dec-12-2025-01-07-19-PM.png" 
          alt="Background" class="bg-image">
-    <button id="loginBtn" class="btn3d login-btn">Login with Google</button>
+    <!-- Blinking 3D Button -->
+    <button id="loginBtn" class="btn3d blinking">Login with Google</button>
   </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -32,12 +33,11 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 
-// Google login
-const loginBtn = document.getElementById('loginBtn');
-loginBtn.addEventListener('click', () => {
+// Google Login
+document.getElementById('loginBtn').addEventListener('click', () => {
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider)
-    .then((result) => {
+    .then(() => {
       window.location.href = 'dashboard.html';
     })
     .catch(err => alert(err.message));
