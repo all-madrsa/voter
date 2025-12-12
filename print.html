@@ -15,6 +15,8 @@ input, button {margin:5px; padding:8px; font-size:14px;}
 #imagesList {display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;}
 .img-box {position:relative;}
 .delete-btn {position:absolute; top:0; right:0; background:red; color:white; border:none; border-radius:50%; width:18px; height:18px; cursor:pointer;}
+.slip-row {margin-bottom:5px; font-size:14px;}
+.slip-label {font-weight:bold; display:inline-block; width:130px;}
 </style>
 </head>
 <body>
@@ -40,32 +42,40 @@ input, button {margin:5px; padding:8px; font-size:14px;}
 
 <script>
 const { jsPDF } = window.jspdf;
-let pdfImages = [];
+let pdfData = {}; // extracted text fields
 let voterImg = null;
 
 // Load saved voter image
 const savedImg = localStorage.getItem('voterImage');
 if(savedImg){ voterImg = savedImg; displayVoterImage(voterImg); }
 
+// PDF Text Extraction
 document.getElementById('pdfFile').addEventListener('change', async function(){
     const file = this.files[0];
     if(!file) return;
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-    pdfImages = [];
+
+    let fullText = '';
     for(let i=1;i<=pdf.numPages;i++){
         const page = await pdf.getPage(i);
-        const viewport = page.getViewport({scale:2});
-        const canvas = document.createElement('canvas');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d');
-        await page.render({canvasContext: ctx, viewport: viewport}).promise;
-        pdfImages.push(canvas.toDataURL('image/jpeg'));
+        const content = await page.getTextContent();
+        const strings = content.items.map(item=>item.str);
+        fullText += strings.join(' ') + '\n';
     }
-    alert("PDF processed successfully!");
+
+    // Extract required fields using RegEx
+    pdfData.firstName = (fullText.match(/First Name\s*([A-Za-z\s]+)/i)||['',''])[1].trim();
+    pdfData.lastName  = (fullText.match(/Last Name\s*([A-Za-z\s]+)/i)||['',''])[1].trim();
+    pdfData.epic      = (fullText.match(/EPIC No\s*([A-Z0-9]+)/i)||['',''])[1].trim();
+    pdfData.polling   = (fullText.match(/Polling Station\s*([A-Za-z0-9\s,]+)/i)||['',''])[1].trim();
+    pdfData.partNo    = (fullText.match(/Part Number Part Name\s*([A-Za-z0-9\s\-]+)/i)||['',''])[1].trim();
+    pdfData.serial    = (fullText.match(/Part Serial Number\s*([0-9]+)/i)||['',''])[1].trim();
+
+    alert("PDF text extracted successfully!");
 });
 
+// Voter Image
 document.getElementById('imgFile').addEventListener('change', function(){
     const file = this.files[0];
     if(!file) return;
@@ -91,48 +101,38 @@ function displayVoterImage(src){
     box.appendChild(img); box.appendChild(del); div.appendChild(box);
 }
 
-// Preview merged
+// Preview merged slip
 function mergePreview(){
-    if(pdfImages.length===0){ alert("Upload PDF first"); return; }
     const preview = document.getElementById('preview');
     preview.innerHTML='';
-    pdfImages.forEach(src=>{
-        const img = new Image();
-        img.src=src;
-        img.style.width='120px';
-        img.style.height='auto';
-        preview.appendChild(img);
-    });
+
+    // Show extracted fields
+    for(const key of ['firstName','lastName','epic','polling','partNo','serial']){
+        const row = document.createElement('div');
+        row.className='slip-row';
+        row.innerHTML = `<span class="slip-label">${key.replace(/([A-Z])/g,' $1').replace(/^./,str=>str.toUpperCase())}:</span> ${pdfData[key]||''}`;
+        preview.appendChild(row);
+    }
+
+    // Show voter image
     if(voterImg){
         const img = new Image();
         img.src=voterImg;
-        img.style.width='40px';
-        img.style.height='40px';
+        img.style.width='80px';
+        img.style.height='80px';
+        img.style.marginTop='10px';
         preview.appendChild(img);
     }
 }
 
-// Generate single page jsPDF
+// Generate PDF from preview
 async function generateDoc(){
-    if(pdfImages.length===0){ alert("Upload PDF first"); return null; }
-    const doc = new jsPDF({unit:'mm', format:[50,200]}); // 2 inch width
-    let y=5;
-    for(const src of pdfImages){
-        const img = new Image();
-        img.src=src;
-        await new Promise(r=>img.onload=r);
-        const imgProps = doc.getImageProperties(img);
-        const pdfWidth = 45; // fit mini printer
-        const pdfHeight = (imgProps.height*pdfWidth)/imgProps.width;
-        doc.addImage(img,'JPEG',5,y,pdfWidth,pdfHeight);
-        y+=pdfHeight+2;
-    }
-    if(voterImg){
-        const img = new Image();
-        img.src=voterImg;
-        await new Promise(r=>img.onload=r);
-        doc.addImage(voterImg,'JPEG',5,y,40,40);
-    }
+    const preview = document.getElementById('preview');
+    if(!preview.innerHTML){ alert("Preview first!"); return null; }
+    const canvas = await html2canvas(preview);
+    const imgData = canvas.toDataURL("image/png");
+    const doc = new jsPDF({orientation:'portrait',unit:'mm',format:[105,148]}); // A6
+    doc.addImage(imgData,'PNG',5,5,95,138);
     return doc;
 }
 
@@ -142,7 +142,7 @@ async function printDoc(){
 }
 async function downloadDoc(){
     const doc = await generateDoc();
-    if(doc) doc.save('Voter_Merged.pdf');
+    if(doc) doc.save('Voter_Merged_A6.pdf');
 }
 async function sendWhatsApp(){
     const doc = await generateDoc();
@@ -152,5 +152,6 @@ async function sendWhatsApp(){
     window.open(`https://wa.me/?text=Voter PDF: ${url}`,'_blank');
 }
 </script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 </body>
 </html>
