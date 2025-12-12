@@ -12,7 +12,7 @@ html, body {
   background: #000; /* fallback */
 }
 
-/* Background Image Fullscreen */
+/* Fullscreen background image */
 .bg-image {
   position: fixed;
   top: 0;
@@ -23,7 +23,7 @@ html, body {
   z-index: -1;
 }
 
-/* 3D Button */
+/* 3D Blinking Button */
 .btn3d {
   padding: 20px 60px;
   font-size: 22px;
@@ -33,23 +33,35 @@ html, body {
   border-radius: 12px;
   color: #fff;
   cursor: pointer;
-  box-shadow: 0 6px #999;
+  position: relative;
+  z-index: 1;
   transition: all 0.2s ease;
+
+  /* 3D effect */
+  background: linear-gradient(145deg, #3498db, #2980b9);
+  box-shadow: 0 5px 0 #1c5980,
+              0 8px 15px rgba(0,0,0,0.4);
 }
 
 /* Press effect */
 .btn3d:active {
-  transform: translateY(4px);
-  box-shadow: 0 3px #666;
+  transform: translateY(5px);
+  box-shadow: 0 2px 0 #1c5980,
+              0 4px 8px rgba(0,0,0,0.4);
+}
+
+/* Hover brightening effect */
+.btn3d:hover {
+  filter: brightness(1.2);
 }
 
 /* Blinking / color animation */
 @keyframes blinkColor {
-  0% { background-color: #3498db; }
-  25% { background-color: #e74c3c; }
-  50% { background-color: #2ecc71; }
-  75% { background-color: #f1c40f; }
-  100% { background-color: #3498db; }
+  0%   { background: linear-gradient(145deg, #3498db, #2980b9); }
+  25%  { background: linear-gradient(145deg, #e74c3c, #c0392b); }
+  50%  { background: linear-gradient(145deg, #2ecc71, #27ae60); }
+  75%  { background: linear-gradient(145deg, #f1c40f, #f39c12); }
+  100% { background: linear-gradient(145deg, #3498db, #2980b9); }
 }
 
 .blinking {
