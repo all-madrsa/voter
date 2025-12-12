@@ -5,11 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Voter Slip Extract & PDF</title>
 <style>
-body {font-family: Arial,sans-serif; display:flex; flex-direction:column; align-items:center; padding:10px;}
+body {font-family: Arial, sans-serif; display:flex; flex-direction:column; align-items:center; padding:10px;}
 input, button {margin:5px; padding:8px; font-size:14px;}
 #preview {border:1px solid #ccc; padding:10px; margin-top:20px; width:350px;}
 .slip-row {margin-bottom:5px; font-size:14px;}
-.slip-label {font-weight:bold; display:inline-block; width:140px;}
 #voterImg {width:80px; height:80px; object-fit:cover; margin-top:10px;}
 .btn3d {padding:8px 15px; font-size:12px; border-radius:8px; color:#fff; cursor:pointer; border:none; background:linear-gradient(145deg,#3498db,#2980b9); box-shadow:0 3px 0 #1c5980,0 4px 8px rgba(0,0,0,0.4);}
 .btn3d:active {transform:translateY(3px); box-shadow:0 1px 0 #1c5980,0 2px 4px rgba(0,0,0,0.4);}
@@ -72,38 +71,39 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
     }
 
     const lines = fullText.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+
     extracted = {}; // reset
 
     lines.forEach(line=>{
-        if(line.match(/Name:/) && !line.match(/Husband/)){
-            let fullName = line.split(':')[1].trim();
-            let nameParts = fullName.split(' ');
-            extracted.firstName = nameParts[0] || '';
-            extracted.lastName = nameParts.slice(1).join(' ') || '';
+        if(/Name\s*:/.test(line)){
+            let name = line.split(':')[1].trim();
+            const nameParts = name.split(' ');
+            extracted.firstName = nameParts[0];
+            extracted.lastName = nameParts.slice(1).join(' ');
         }
-        else if(line.match(/Husband's Name:/)){
+        else if(/Husband|Father/i.test(line)){
             extracted.husbandName = line.split(':')[1].trim();
         }
-        else if(line.match(/Epic no\.|EPIC No/)){
+        else if(/Date of Birth|DOB|जन्मतारीख/i.test(line)){
+            extracted.dob = line.split(':')[1].trim();
+        }
+        else if(/Gender|स्तर्ी/i.test(line)){
+            extracted.gender = line.split(':')[1].trim();
+        }
+        else if(/Epic no|EPIC|मतदार ओळखपतर्/i.test(line)){
             extracted.epic = line.split(':')[1].trim();
         }
-        else if(line.match(/Serial No\.|अनुक्रमांक/)){
+        else if(/Serial No|Serial|अनुक्रमांक/i.test(line)){
             extracted.serial = line.split(':')[1].trim();
         }
-        else if(line.match(/Part No\.|भाग क्रमांक/)){
+        else if(/Part No/i.test(line)){
             extracted.partNo = line.split(':')[1].trim();
         }
-        else if(line.match(/Assembly Constituency No\. and Name|विधानसभा मतदारसंघ/)){
+        else if(/Assembly Constituency/i.test(line)){
             extracted.constituency = line.split(':')[1].trim();
         }
-        else if(line.match(/Polling Station Address|मतदान केंद्र/)){
+        else if(/Polling Station/i.test(line)){
             extracted.polling = line.split(':')[1].trim();
-        }
-        else if(line.match(/Date of Birth|जन्मतारीख/)){
-            extracted.dob = line.split(':')[1]?.trim() || '';
-        }
-        else if(line.match(/Gender|स्तर्ी/)){
-            extracted.gender = line.split(':')[1]?.trim() || '';
         }
     });
 
@@ -118,7 +118,7 @@ function mergePreview(){
         if(extracted[key]){
             const row = document.createElement('div');
             row.className = 'slip-row';
-            row.innerHTML = `<span class="slip-label">${key.replace(/([A-Z])/g,' $1').trim()}:</span> ${extracted[key]}`;
+            row.textContent = `${key}: ${extracted[key]}`;
             div.appendChild(row);
         }
     }
@@ -139,7 +139,7 @@ async function downloadPDF(){
     let y = 10;
     for(const key in extracted){
         if(extracted[key]){
-            doc.text(`${key.replace(/([A-Z])/g,' $1').trim()}: ${extracted[key]}`, 10, y);
+            doc.text(`${key}: ${extracted[key]}`, 10, y);
             y += 10;
         }
     }
