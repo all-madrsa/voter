@@ -7,13 +7,12 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="login-page">
-    <!-- Background Image -->
-    <img src="https://i.ibb.co/fVzDLVT6/Chat-GPT-Image-Dec-12-2025-01-07-19-PM.png" 
-         alt="Background" class="bg-image">
-    <!-- Blinking 3D Button -->
-    <button id="loginBtn" class="btn3d blinking">Login with Google</button>
-  </div>
+
+<img src="https://i.ibb.co/fVzDLVT6/Chat-GPT-Image-Dec-12-2025-01-07-19-PM.png" 
+     alt="Background" class="bg-image">
+
+<!-- Centered Blinking Button -->
+<button id="loginBtn" class="btn3d blinking">Login with Google</button>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
@@ -37,11 +36,10 @@ const auth = firebase.auth();
 document.getElementById('loginBtn').addEventListener('click', () => {
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider)
-    .then(() => {
-      window.location.href = 'dashboard.html';
-    })
-    .catch(err => alert(err.message));
+      .then(() => window.location.href='dashboard.html')
+      .catch(err => alert(err.message));
 });
 </script>
+
 </body>
 </html>
