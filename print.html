@@ -9,7 +9,7 @@ body {font-family: Arial,sans-serif; display:flex; flex-direction:column; align-
 input, button {margin:5px; padding:8px; font-size:14px;}
 #preview {border:1px solid #ccc; padding:10px; margin-top:20px; width:350px;}
 .slip-row {margin-bottom:5px; font-size:14px;}
-.slip-label {font-weight:bold; display:inline-block; width:120px;}
+.slip-label {font-weight:bold; display:inline-block; width:140px;}
 #voterImg {width:80px; height:80px; object-fit:cover; margin-top:10px;}
 .btn3d {padding:8px 15px; font-size:12px; border-radius:8px; color:#fff; cursor:pointer; border:none; background:linear-gradient(145deg,#3498db,#2980b9); box-shadow:0 3px 0 #1c5980,0 4px 8px rgba(0,0,0,0.4);}
 .btn3d:active {transform:translateY(3px); box-shadow:0 1px 0 #1c5980,0 2px 4px rgba(0,0,0,0.4);}
@@ -25,8 +25,8 @@ input, button {margin:5px; padding:8px; font-size:14px;}
 <input type="file" id="imgFile" accept="image/*"><br>
 
 <button class="btn3d" onclick="mergePreview()">Preview / Merge</button>
+<button class="btn3d" onclick="deleteImage()">Delete Image</button>
 <button class="btn3d" onclick="downloadPDF()">Download PDF</button>
-<button class="btn3d" onclick="deleteImage()">Delete Saved Image</button>
 
 <div id="preview"></div>
 
@@ -37,23 +37,22 @@ input, button {margin:5px; padding:8px; font-size:14px;}
 let voterImg = null;
 let extracted = {};
 
-// Load voter image and save in localStorage
+// Load voter image
 document.getElementById('imgFile').addEventListener('change', function(){
     const reader = new FileReader();
     reader.onload = e => {
         voterImg = e.target.result;
         localStorage.setItem('voterImage', voterImg);
-        alert('Voter image saved!');
     };
     reader.readAsDataURL(this.files[0]);
 });
 
 // Delete saved image
 function deleteImage(){
-    localStorage.removeItem('voterImage');
     voterImg = null;
-    document.getElementById('preview').innerHTML = '';
-    alert('Saved voter image deleted!');
+    localStorage.removeItem('voterImage');
+    alert('Image deleted!');
+    mergePreview();
 }
 
 // Extract text from PDF
@@ -72,30 +71,44 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
         fullText += strings.join('\n') + '\n';
     }
 
-    // Extract only required fields using colon after label
-    extracted.firstName = fullText.match(/Name\s*[:]\s*(.+)/i)?.[1]?.trim() || '';
-    extracted.lastName = fullText.match(/Name\s*[:]\s*(.+)$/m)?.[1]?.trim() || '';
-    extracted.epic = fullText.match(/Epic no\.?\s*[:]\s*(\S+)/i)?.[1]?.trim() || '';
-    extracted.serial = fullText.match(/Serial No\.?\s*[:]\s*(\S+)/i)?.[1]?.trim() || '';
-    extracted.partNo = fullText.match(/Part No\.?\s*[:]\s*(.+)/i)?.[1]?.trim() || '';
-    extracted.polling = fullText.match(/Polling Station\s*(?:Address)?\s*[:]\s*(.+)/i)?.[1]?.trim() || '';
+    // Helper function: extract after label
+    function getValue(labels){
+        for(const lbl of labels){
+            const regex = new RegExp(lbl+'\\s*:?\\s*(.+)', 'i');
+            const match = fullText.match(regex);
+            if(match) return match[1].trim();
+        }
+        return '';
+    }
+
+    // Extract required fields with multiple label variants
+    const fullName = getValue(['Name', 'नाव']);
+    const fullNameClean = fullName.replace(/\s+/g,' ').replace(/,/g,' ').trim();
+    const nameParts = fullNameClean.split(' ');
+    extracted.firstName = nameParts[0] || '';
+    extracted.lastName = nameParts.slice(1).join(' ') || '';
+
+    extracted.epic = getValue(['Epic no\\.', 'EPIC No', 'मतदार ओळखपतर् कर्']);
+    extracted.serial = getValue(['Serial No\\.', 'Serial Number', 'अनुकर्मांक']);
+    extracted.partNo = getValue(['Part No\\. and Name', 'Part No and Name', 'भाग क्रमांक आणि नाव']);
+    extracted.constituency = getValue(['Assembly Constituency No\\. and Name', 'Assembly Constituency No and Name', 'विधानसभा मतदारसंघ क्रमांक आणि नाव']);
+    extracted.polling = getValue(['Polling Station Address', 'Polling Station', 'मतदान केंद्राचा पत्ता']);
 
     alert('PDF text extracted successfully!');
 });
 
-// Preview extracted data + voter image
+// Preview extracted data
 function mergePreview(){
     const div = document.getElementById('preview');
     div.innerHTML = '';
-    if(!extracted.firstName && !extracted.epic){ alert('Upload PDF first!'); return; }
-
     for(const key in extracted){
-        const row = document.createElement('div');
-        row.className = 'slip-row';
-        row.innerHTML = `<span class="slip-label">${key.replace(/([A-Z])/g,' $1').trim()}:</span> ${extracted[key]}`;
-        div.appendChild(row);
+        if(extracted[key]) {
+            const row = document.createElement('div');
+            row.className = 'slip-row';
+            row.innerHTML = `<span class="slip-label">${key.replace(/([A-Z])/g,' $1').trim()}:</span> ${extracted[key]}`;
+            div.appendChild(row);
+        }
     }
-
     const savedImg = localStorage.getItem('voterImage');
     if(savedImg){
         const img = document.createElement('img');
@@ -105,23 +118,22 @@ function mergePreview(){
     }
 }
 
-// Download A6 PDF
+// Download PDF
 async function downloadPDF(){
-    if(!extracted.firstName && !extracted.epic){ alert('Upload PDF first!'); return; }
+    if(!Object.keys(extracted).length){ alert('Upload PDF first!'); return; }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({unit:'mm', format:'a6'});
-    let y=10;
-
+    let y = 10;
     for(const key in extracted){
-        doc.text(`${key.replace(/([A-Z])/g,' $1').trim()}: ${extracted[key]}`, 10, y);
-        y += 10;
+        if(extracted[key]){
+            doc.text(`${key.replace(/([A-Z])/g,' $1').trim()}: ${extracted[key]}`, 10, y);
+            y += 10;
+        }
     }
-
     const savedImg = localStorage.getItem('voterImage');
     if(savedImg){
         doc.addImage(savedImg, 'JPEG', 10, y, 40, 40);
     }
-
     doc.save('voter-slip.pdf');
 }
 </script>
