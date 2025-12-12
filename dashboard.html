@@ -45,7 +45,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 
-/* Redirect if not logged in */
+/* Check Login */
 auth.onAuthStateChanged(user => {
   if(!user) window.location.href = 'index.html';
 });
@@ -65,7 +65,7 @@ function openCloudinaryUpload(){
     const file = fileInput.files[0];
     if(!file) return;
 
-    const cloudName = 'YOUR_CLOUD_NAME'; 
+    const cloudName = 'YOUR_CLOUD_NAME';
     const unsignedUploadPreset = 'dlsqxs7zl';
     const url = `https://api.cloudinary.com/v1_1/${cloudName}/upload`;
     const formData = new FormData();
@@ -95,7 +95,7 @@ function openCloudinaryUpload(){
   fileInput.click();
 }
 
-/* Open new print page with 4 buttons */
+/* OPEN PRINT WINDOW WITH 4 BIG BUTTONS */
 function openPrintWindow(){
   const win = window.open("", "_blank");
 
@@ -104,14 +104,79 @@ function openPrintWindow(){
     <head>
       <title>Print Page</title>
       <link rel="stylesheet" href="style.css">
+      <style>
+        body { display:flex; justify-content:center; align-items:center; height:100vh; }
+
+        /* SMALL LOGOUT BUTTON */
+        .print-logout {
+          position: fixed;
+          top: 15px;
+          right: 15px;
+          padding: 8px 16px;
+          font-size: 14px;
+          background: #ff4444;
+          color: #fff;
+          border: none;
+          border-radius: 8px;
+          box-shadow: 0 4px #a30000;
+          cursor: pointer;
+        }
+
+        .print-logout:active {
+          box-shadow: 0 2px #a30000;
+          transform: translateY(2px);
+        }
+
+        .big-btn {
+          width: 80%;
+          max-width: 350px;
+          padding: 18px;
+          font-size: 22px;
+          margin: 18px auto;
+          border: none;
+          border-radius: 14px;
+          color: white;
+          background: linear-gradient(#006eff, #0047b3);
+          box-shadow: 0 6px 0 #002d73;
+          display: block;
+          text-align: center;
+        }
+
+        .big-btn:active {
+          box-shadow: 0 2px 0 #002d73;
+          transform: translateY(4px);
+        }
+
+      </style>
     </head>
-    <body class="dash-bg" style="display:flex; justify-content:center; align-items:center;">
-      <div class="button-container">
-        <button class="btn3d blinking">Button A</button>
-        <button class="btn3d">Button B</button>
-        <button class="btn3d">Button C</button>
-        <button class="btn3d">Button D</button>
+
+    <body class="dash-bg">
+
+      <button class="print-logout" onclick="window.close()">Logout</button>
+
+      <div style="width:100%; text-align:center; margin-top:40px;">
+
+        <button class="big-btn blinking"
+          onclick="window.open('https://mahasecvoterlist.in/ObjectionOnClick/SearchVoterName','_blank')">
+          Download
+        </button>
+
+        <button class="big-btn"
+          onclick="window.open('https://electoralsearch.eci.gov.in/','_blank')">
+          Election Search
+        </button>
+
+        <button class="big-btn"
+          onclick="window.location.href='pdf.html'">
+          WhatsApp Send
+        </button>
+
+        <button class="big-btn" onclick="window.print()">
+          Print
+        </button>
+
       </div>
+
     </body>
     </html>
   `);
