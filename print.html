@@ -42,7 +42,6 @@ document.getElementById('imgFile').addEventListener('change', function(){
     reader.onload = e => {
         voterImg = e.target.result;
         localStorage.setItem('voterImage', voterImg);
-        mergePreview();
     };
     reader.readAsDataURL(this.files[0]);
 });
@@ -71,28 +70,46 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
         fullText += strings.join('\n') + '\n';
     }
 
-    // Normalize lines
-    const lines = fullText.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+    // Split lines and trim
+    const lines = fullText.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
 
-    // Reset extracted
+    // Reset extracted object
     extracted = {};
 
-    // Map all required fields
-    lines.forEach(line => {
-        if(line.match(/Name\s*:/i)) extracted.firstName = line.split(':')[1].trim();
-        else if(line.match(/Husband's Name/i)) extracted.husbandName = line.split(':')[1].trim();
-        else if(line.match(/Date of Birth|Age/i)) extracted.dob = line.split(':')[1].trim();
-        else if(line.match(/EPIC/i)) extracted.epic = line.split(':')[1].trim();
-        else if(line.match(/Serial/i)) extracted.serial = line.split(':')[1].trim();
-        else if(line.match(/Part No/i)) extracted.partNo = line.split(':')[1].trim();
-        else if(line.match(/Assembly Constituency/i)) extracted.constituency = line.split(':')[1].trim();
-        else if(line.match(/Polling Station/i)) extracted.polling = line.split(':')[1].trim();
-        else if(line.match(/Gender/i)) extracted.gender = line.split(':')[1].trim();
-        else if(line.match(/Address/i)) extracted.address = line.split(':')[1].trim();
+    lines.forEach(line=>{
+        if(line.toLowerCase().includes('name:') && !extracted.firstName){
+            const namePart = line.split(':')[1]?.trim() || '';
+            const parts = namePart.split(' ');
+            extracted.firstName = parts[0] || '';
+            extracted.lastName = parts.slice(1).join(' ') || '';
+        }
+        else if(line.toLowerCase().includes("husband's name:") || line.toLowerCase().includes("पति")) {
+            extracted.husbandName = line.split(':')[1]?.trim() || '';
+        }
+        else if(line.toLowerCase().includes('date of birth') || line.toLowerCase().includes('dob')) {
+            extracted.dob = line.split(':')[1]?.trim() || '';
+        }
+        else if(line.toLowerCase().includes('epic') || line.toLowerCase().includes('मतदार')) {
+            extracted.epic = line.split(':')[1]?.trim() || '';
+        }
+        else if(line.toLowerCase().includes('serial') || line.toLowerCase().includes('अनुक्रमांक')) {
+            extracted.serial = line.split(':')[1]?.trim() || '';
+        }
+        else if(line.toLowerCase().includes('part no') || line.toLowerCase().includes('भाग')) {
+            extracted.partNo = line.split(':')[1]?.trim() || '';
+        }
+        else if(line.toLowerCase().includes('assembly constituency') || line.toLowerCase().includes('विधानसभा')) {
+            extracted.constituency = line.split(':')[1]?.trim() || '';
+        }
+        else if(line.toLowerCase().includes('polling station') || line.toLowerCase().includes('मतदान केंद्र')) {
+            extracted.polling = line.split(':')[1]?.trim() || '';
+        }
+        else if(line.toLowerCase().includes('address') || line.toLowerCase().includes('पत्ता')) {
+            extracted.address = line.split(':')[1]?.trim() || '';
+        }
     });
 
     alert('PDF text extracted successfully!');
-    mergePreview();
 });
 
 // Preview extracted data
@@ -103,7 +120,7 @@ function mergePreview(){
         if(extracted[key]){
             const row = document.createElement('div');
             row.className = 'slip-row';
-            row.innerHTML = `${key}: ${extracted[key]}`;
+            row.textContent = `${key}: ${extracted[key]}`;
             div.appendChild(row);
         }
     }
@@ -120,18 +137,26 @@ function mergePreview(){
 async function downloadPDF(){
     if(!Object.keys(extracted).length){ alert('Upload PDF first!'); return; }
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({unit:'mm', format:'a6'});
-    let y = 10;
+    const doc = new jsPDF({unit:'mm', format:'a4'}); // A4 for full content
+    doc.setFont("helvetica");
+    doc.setFontSize(12);
+    let y = 20;
+
     for(const key in extracted){
         if(extracted[key]){
-            doc.text(`${key}: ${extracted[key]}`, 10, y);
-            y += 10;
+            let text = `${key}: ${extracted[key]}`;
+            let lines = doc.splitTextToSize(text, 180); // wrap text to page width
+            doc.text(lines, 10, y);
+            y += lines.length * 7;
         }
     }
+
     const savedImg = localStorage.getItem('voterImage');
     if(savedImg){
         doc.addImage(savedImg, 'JPEG', 10, y, 50, 50);
+        y += 55;
     }
+
     doc.save('voter-slip.pdf');
 }
 </script>
