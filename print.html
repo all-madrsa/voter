@@ -24,8 +24,9 @@ input, button {margin:5px; padding:8px; font-size:14px;}
 <label>Select Voter Image:</label>
 <input type="file" id="imgFile" accept="image/*"><br>
 
-<button class="btn3d" onclick="mergePreview()">Preview</button>
+<button class="btn3d" onclick="mergePreview()">Preview / Merge</button>
 <button class="btn3d" onclick="downloadPDF()">Download PDF</button>
+<button class="btn3d" onclick="deleteImage()">Delete Saved Image</button>
 
 <div id="preview"></div>
 
@@ -42,9 +43,18 @@ document.getElementById('imgFile').addEventListener('change', function(){
     reader.onload = e => {
         voterImg = e.target.result;
         localStorage.setItem('voterImage', voterImg);
+        alert('Voter image saved!');
     };
     reader.readAsDataURL(this.files[0]);
 });
+
+// Delete saved image
+function deleteImage(){
+    localStorage.removeItem('voterImage');
+    voterImg = null;
+    document.getElementById('preview').innerHTML = '';
+    alert('Saved voter image deleted!');
+}
 
 // Extract text from PDF
 document.getElementById('pdfFile').addEventListener('change', async function(){
@@ -62,13 +72,13 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
         fullText += strings.join('\n') + '\n';
     }
 
-    // Extract only required fields with strict regex
-    extracted.firstName = fullText.match(/Name\s*:\s*([A-Za-z\s]+)/i)?.[1]?.trim() || '';
-    extracted.lastName = fullText.match(/Name\s*:\s*([A-Za-z\s]+)$/m)?.[1]?.trim() || '';
-    extracted.epic = fullText.match(/Epic no\.?\s*[:\-]\s*(\S+)/i)?.[1]?.trim() || '';
-    extracted.serial = fullText.match(/Serial No\.?\s*[:\-]\s*(\S+)/i)?.[1]?.trim() || '';
-    extracted.partNo = fullText.match(/Part No\.?\s*[:\-]\s*([\d\-]+)/i)?.[1]?.trim() || '';
-    extracted.polling = (fullText.match(/Polling Station Address\s*[:\-]\s*(.+)/i)?.[1] || '').split('Scan')[0].trim();
+    // Extract only required fields using colon after label
+    extracted.firstName = fullText.match(/Name\s*[:]\s*(.+)/i)?.[1]?.trim() || '';
+    extracted.lastName = fullText.match(/Name\s*[:]\s*(.+)$/m)?.[1]?.trim() || '';
+    extracted.epic = fullText.match(/Epic no\.?\s*[:]\s*(\S+)/i)?.[1]?.trim() || '';
+    extracted.serial = fullText.match(/Serial No\.?\s*[:]\s*(\S+)/i)?.[1]?.trim() || '';
+    extracted.partNo = fullText.match(/Part No\.?\s*[:]\s*(.+)/i)?.[1]?.trim() || '';
+    extracted.polling = fullText.match(/Polling Station\s*(?:Address)?\s*[:]\s*(.+)/i)?.[1]?.trim() || '';
 
     alert('PDF text extracted successfully!');
 });
@@ -77,7 +87,7 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
 function mergePreview(){
     const div = document.getElementById('preview');
     div.innerHTML = '';
-    if(!extracted.epic){ alert('Upload PDF first!'); return; }
+    if(!extracted.firstName && !extracted.epic){ alert('Upload PDF first!'); return; }
 
     for(const key in extracted){
         const row = document.createElement('div');
@@ -97,7 +107,7 @@ function mergePreview(){
 
 // Download A6 PDF
 async function downloadPDF(){
-    if(!extracted.epic){ alert('Upload PDF first!'); return; }
+    if(!extracted.firstName && !extracted.epic){ alert('Upload PDF first!'); return; }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({unit:'mm', format:'a6'});
     let y=10;
