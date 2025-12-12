@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF + Image Merge Tool</title>
+<style>
+body {font-family: Arial,sans-serif; display:flex; flex-direction:column; align-items:center; padding:10px;}
+h2 {margin-bottom:20px;}
+input, button {margin:10px; padding:10px;}
+#preview {border:1px solid #ccc; padding:10px; margin-top:20px; display:flex; flex-direction:column; align-items:center;}
+#preview img {margin-top:10px; object-fit:contain;}
+.btn3d {
+    padding:15px 30px; font-size:16px; border-radius:12px;
+    color:#fff; cursor:pointer; border:none;
+    background:linear-gradient(145deg,#3498db,#2980b9);
+    box-shadow:0 5px 0 #1c5980,0 8px 15px rgba(0,0,0,0.4);
+}
+.btn3d:active {
+    transform:translateY(5px);
+    box-shadow:0 2px 0 #1c5980,0 4px 8px rgba(0,0,0,0.4);
+}
+#imagesList {display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;}
+.img-box {position:relative;}
+.delete-btn {position:absolute; top:0; right:0; background:red; color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer;}
+</style>
+</head>
+<body>
+
+<h2>PDF + Image Merge Tool</h2>
+
+<label>Select PDF File:</label>
+<input type="file" id="pdfFile" accept="application/pdf">
+<label>Select Image File (Save Once):</label>
+<input type="file" id="imgFile" accept="image/*">
+<div id="imagesList"></div>
+
+<button class="btn3d" onclick="mergePreview()">Merge & Preview</button>
+<button class="btn3d" onclick="printDoc()">Print</button>
+<button class="btn3d" onclick="downloadDoc()">Download</button>
+<button class="btn3d" onclick="sendWhatsApp()">WhatsApp Send</button>
+
+<h3>Preview:</h3>
+<div id="preview"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+const { jsPDF } = window.jspdf;
+let pdfPages = [];
+let imgData = null;
+
+// Load saved image from localStorage
+const savedImage = localStorage.getItem('voterImage');
+if(savedImage){ imgData = savedImage; displayImage(imgData); }
+
+// PDF Upload
+document.getElementById('pdfFile').addEventListener('change', async function(){
+    const file = this.files[0];
+    if(!file) return;
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+    pdfPages = [];
+
+    for(let i=1;i<=pdf.numPages;i++){
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({scale:2}); // better resolution
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const context = canvas.getContext('2d');
+        await page.render({canvasContext: context, viewport: viewport}).promise;
+        pdfPages.push(canvas.toDataURL('image/jpeg'));
+    }
+    alert("PDF processed successfully!");
+});
+
+// Image Upload and save
+document.getElementById('imgFile').addEventListener('change', function(){
+    const file = this.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e){
+        imgData = e.target.result;
+        localStorage.setItem('voterImage', imgData);
+        displayImage(imgData);
+    };
+    reader.readAsDataURL(file);
+});
+
+function displayImage(src){
+    const div = document.getElementById('imagesList');
+    div.innerHTML='';
+    const box = document.createElement('div');
+    box.className='img-box';
+    const img=document.createElement('img');
+    img.src=src; img.style.width='150px'; img.style.height='150px';
+    const del = document.createElement('button');
+    del.innerText='X'; del.className='delete-btn';
+    del.onclick=()=>{ localStorage.removeItem('voterImage'); imgData=null; div.innerHTML=''; };
+    box.appendChild(img); box.appendChild(del); div.appendChild(box);
+}
+
+// Merge Preview
+function mergePreview(){
+    if(pdfPages.length===0){ alert("Upload PDF first"); return; }
+    const previewDiv = document.getElementById('preview');
+    previewDiv.innerHTML='';
+
+    pdfPages.forEach(pageData=>{
+        const img = new Image();
+        img.src = pageData;
+        img.style.width='120px'; // 2 inch approx
+        img.style.height='auto';
+        previewDiv.appendChild(img);
+    });
+
+    if(imgData){
+        const img = new Image();
+        img.src = imgData;
+        img.style.width='50px'; // 2 inch approx
+        img.style.height='50px';
+        img.style.marginTop='5px';
+        previewDiv.appendChild(img);
+    }
+}
+
+// Generate jsPDF
+async function generateDoc(){
+    if(pdfPages.length===0){ alert("Upload PDF first"); return null; }
+    const doc = new jsPDF({unit:'mm', format:[50,200]});
+    let y=5;
+    for(const pageData of pdfPages){
+        const img = new Image();
+        img.src = pageData;
+        await new Promise(r=>img.onload=r);
+        const imgProps = doc.getImageProperties(img);
+        const pdfWidth = 45;
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        doc.addImage(img,'JPEG',5,y,pdfWidth,pdfHeight);
+        y += pdfHeight + 2;
+    }
+    if(imgData){
+        const img = new Image();
+        img.src = imgData;
+        await new Promise(r=>img.onload=r);
+        doc.addImage(imgData,'JPEG',5,y,45,45); // 2 inch image
+    }
+    return doc;
+}
+
+// Print
+async function printDoc(){
+    const doc = await generateDoc();
+    if(doc){ doc.autoPrint(); window.open(doc.output('bloburl'),'_blank'); }
+}
+
+// Download
+async function downloadDoc(){
+    const doc = await generateDoc();
+    if(doc) doc.save('Voter_Merged.pdf');
+}
+
+// WhatsApp
+async function sendWhatsApp(){
+    const doc = await generateDoc();
+    const blob = doc.output('blob');
+    const file = new File([blob],'Voter.pdf',{type:'application/pdf'});
+    const url = URL.createObjectURL(file);
+    window.open(`https://wa.me/?text=Voter PDF: ${url}`,'_blank');
+}
+</script>
+
+</body>
+</html>
