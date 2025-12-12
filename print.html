@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PDF + Image Merge Tool</title>
+<title>Voter PDF + Image Merge for Pocket Printer</title>
 <style>
 body {font-family: Arial,sans-serif; display:flex; flex-direction:column; align-items:center; padding:10px;}
 h2 {margin-bottom:20px;}
@@ -11,13 +11,13 @@ input, button {margin:10px; padding:10px;}
 #preview {border:1px solid #ccc; padding:10px; margin-top:20px; display:flex; flex-direction:column; align-items:center;}
 #preview img {margin-top:10px; object-fit:contain;}
 .btn3d {
-    padding:15px 30px; font-size:16px; border-radius:12px;
+    padding:12px 25px; font-size:14px; border-radius:12px;
     color:#fff; cursor:pointer; border:none;
     background:linear-gradient(145deg,#3498db,#2980b9);
     box-shadow:0 5px 0 #1c5980,0 8px 15px rgba(0,0,0,0.4);
 }
 .btn3d:active {
-    transform:translateY(5px);
+    transform:translateY(3px);
     box-shadow:0 2px 0 #1c5980,0 4px 8px rgba(0,0,0,0.4);
 }
 #imagesList {display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;}
@@ -27,7 +27,7 @@ input, button {margin:10px; padding:10px;}
 </head>
 <body>
 
-<h2>PDF + Image Merge Tool</h2>
+<h2>Voter PDF + Image Merge Tool</h2>
 
 <label>Select PDF File:</label>
 <input type="file" id="pdfFile" accept="application/pdf">
@@ -51,7 +51,7 @@ const { jsPDF } = window.jspdf;
 let pdfPages = [];
 let imgData = null;
 
-// Load saved image from localStorage
+// Load saved image
 const savedImage = localStorage.getItem('voterImage');
 if(savedImage){ imgData = savedImage; displayImage(imgData); }
 
@@ -65,7 +65,7 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
 
     for(let i=1;i<=pdf.numPages;i++){
         const page = await pdf.getPage(i);
-        const viewport = page.getViewport({scale:2}); // better resolution
+        const viewport = page.getViewport({scale:2});
         const canvas = document.createElement('canvas');
         canvas.width = viewport.width;
         canvas.height = viewport.height;
@@ -76,7 +76,7 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
     alert("PDF processed successfully!");
 });
 
-// Image Upload and save
+// Image Upload
 document.getElementById('imgFile').addEventListener('change', function(){
     const file = this.files[0];
     if(!file) return;
@@ -111,7 +111,7 @@ function mergePreview(){
     pdfPages.forEach(pageData=>{
         const img = new Image();
         img.src = pageData;
-        img.style.width='120px'; // 2 inch approx
+        img.style.width='120px'; // 2 inch
         img.style.height='auto';
         previewDiv.appendChild(img);
     });
@@ -119,8 +119,8 @@ function mergePreview(){
     if(imgData){
         const img = new Image();
         img.src = imgData;
-        img.style.width='50px'; // 2 inch approx
-        img.style.height='50px';
+        img.style.width='45px'; 
+        img.style.height='45px';
         img.style.marginTop='5px';
         previewDiv.appendChild(img);
     }
@@ -129,23 +129,26 @@ function mergePreview(){
 // Generate jsPDF
 async function generateDoc(){
     if(pdfPages.length===0){ alert("Upload PDF first"); return null; }
-    const doc = new jsPDF({unit:'mm', format:[50,200]});
+    const doc = new jsPDF({unit:'mm', format:[50,200]}); // width ~2inch
     let y=5;
     for(const pageData of pdfPages){
         const img = new Image();
         img.src = pageData;
         await new Promise(r=>img.onload=r);
-        const imgProps = doc.getImageProperties(img);
+        const props = doc.getImageProperties(img);
         const pdfWidth = 45;
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        const pdfHeight = (props.height * pdfWidth)/props.width;
+        if(y+pdfHeight > 180){ doc.addPage(); y=5; }
         doc.addImage(img,'JPEG',5,y,pdfWidth,pdfHeight);
-        y += pdfHeight + 2;
+        y+=pdfHeight+2;
     }
+
     if(imgData){
+        if(y+45 > 180){ doc.addPage(); y=5; }
         const img = new Image();
         img.src = imgData;
         await new Promise(r=>img.onload=r);
-        doc.addImage(imgData,'JPEG',5,y,45,45); // 2 inch image
+        doc.addImage(imgData,'JPEG',5,y,45,45);
     }
     return doc;
 }
