@@ -2,111 +2,196 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login Page</title>
+<title>PDF + Image Merge Tool</title>
+
+<!-- PDF.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.min.js"></script>
+
 <style>
-  /* Fullscreen and center content */
-  html, body {
-    margin: 0;
-    padding: 0;
-    height: 100vh;
-    width: 100vw;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-    font-family: Arial, sans-serif;
-  }
+    body {
+        font-family: Arial, sans-serif;
+        background: #e8e8e8;
+        text-align: center;
+        padding: 20px;
+    }
 
-  /* Background Image */
-  body::before {
-    content: "";
-    background-image: url('https://i.ibb.co/fVzDLVT6/Chat-GPT-Image-Dec-12-2025-01-07-19-PM.png');
-    background-size: cover;
-    background-position: center;
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: -1;
-  }
+    h2 {
+        margin-bottom: 20px;
+    }
 
-  /* 3D Blinking Button */
-  .btn3d {
-    padding: 20px 60px;
-    font-size: 22px;
-    font-weight: bold;
-    text-transform: uppercase;
-    border: none;
-    border-radius: 12px;
-    color: #fff;
-    cursor: pointer;
-    position: relative;
-    z-index: 1;
-    transition: all 0.2s ease;
+    .upload-box {
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        width: 90%;
+        max-width: 450px;
+        margin: auto;
+        box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
 
-    /* 3D effect */
-    background: linear-gradient(145deg, #3498db, #2980b9);
-    box-shadow: 0 5px 0 #1c5980,
-                0 8px 15px rgba(0,0,0,0.4);
-  }
+    input {
+        margin: 10px;
+    }
 
-  /* Press effect */
-  .btn3d:active {
-    transform: translateY(5px);
-    box-shadow: 0 2px 0 #1c5980,
-                0 4px 8px rgba(0,0,0,0.4);
-  }
+    .btn {
+        padding: 14px 30px;
+        font-size: 18px;
+        border: none;
+        color: white;
+        background: #007bff;
+        border-radius: 10px;
+        cursor: pointer;
+        margin: 10px;
+    }
 
-  /* Hover effect */
-  .btn3d:hover {
-    filter: brightness(1.2);
-  }
+    .btn:hover {
+        background: #0056b3;
+    }
 
-  /* Blinking color animation */
-  @keyframes blinkColor {
-    0%   { background: linear-gradient(145deg, #3498db, #2980b9); }
-    25%  { background: linear-gradient(145deg, #e74c3c, #c0392b); }
-    50%  { background: linear-gradient(145deg, #2ecc71, #27ae60); }
-    75%  { background: linear-gradient(145deg, #f1c40f, #f39c12); }
-    100% { background: linear-gradient(145deg, #3498db, #2980b9); }
-  }
+    .output-box {
+        margin-top: 25px;
+    }
 
-  .blinking {
-    animation: blinkColor 2s infinite;
-  }
+    img.merged {
+        max-width: 90%;
+        border: 2px solid #000;
+        border-radius: 10px;
+        margin-top: 20px;
+    }
 </style>
 </head>
+
 <body>
 
-<!-- Centered Button -->
-<button id="loginBtn" class="btn3d blinking">Login with Google</button>
+<h2>PDF + Image Mixer (Merge Tool)</h2>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+<div class="upload-box">
+
+    <label><b>Select PDF File:</b></label><br>
+    <input type="file" id="pdfFile" accept="application/pdf"><br>
+
+    <label><b>Select Image File:</b></label><br>
+    <input type="file" id="imgFile" accept="image/*"><br>
+
+    <button class="btn" onclick="mergeFiles()">Merge PDF + Image</button>
+
+</div>
+
+<div class="output-box">
+    <h3>Merged Output:</h3>
+    <img id="finalImg" class="merged" src="">
+
+    <br>
+
+    <button class="btn" onclick="downloadMerged()">Download</button>
+
+    <button class="btn" onclick="window.print()">Print</button>
+
+    <button class="btn" onclick="sendWhatsapp()">WhatsApp Send</button>
+</div>
+
 
 <script>
-  // Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyD7x6epAwfshYNzc4G8JvmE4Bu3UNdMB5U",
-    authDomain: "nikah-c234b.firebaseapp.com",
-    databaseURL: "https://nikah-c234b-default-rtdb.firebaseio.com",
-    projectId: "nikah-c234b",
-    storageBucket: "nikah-c234b.appspot.com",
-    messagingSenderId: "760906560668",
-    appId: "1:760906560668:web:0a2c16a47aeaec26482959",
-    measurementId: "G-ENL0FZPEEF"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
+let mergedDataUrl = "";
 
-  // Google login
-  document.getElementById('loginBtn').addEventListener('click', () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider)
-        .then(() => window.location.href='dashboard.html')
-        .catch(err => alert(err.message));
-  });
+/* ------------------------------
+   Convert PDF → Canvas Image
+---------------------------------*/
+function pdfToImage(pdfFile) {
+    return new Promise((resolve) => {
+        const fileReader = new FileReader();
+
+        fileReader.onload = function () {
+            const typedarray = new Uint8Array(this.result);
+
+            pdfjsLib.getDocument(typedarray).promise.then(pdf => {
+                pdf.getPage(1).then(page => {
+                    const viewport = page.getViewport({ scale: 2 });
+
+                    let canvas = document.createElement("canvas");
+                    let ctx = canvas.getContext("2d");
+
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    page.render({ canvasContext: ctx, viewport: viewport }).promise.then(() => {
+                        resolve(canvas);
+                    });
+                });
+            });
+        };
+
+        fileReader.readAsArrayBuffer(pdfFile);
+    });
+}
+
+/* ------------------------------
+   Merge PDF Image + Uploaded Image
+---------------------------------*/
+async function mergeFiles() {
+    const pdfInput = document.getElementById("pdfFile").files[0];
+    const imgInput = document.getElementById("imgFile").files[0];
+
+    if (!pdfInput || !imgInput) {
+        alert("Please upload both PDF and Image!");
+        return;
+    }
+
+    // Convert PDF → Canvas Image
+    const pdfCanvas = await pdfToImage(pdfInput);
+
+    // Load uploaded image
+    const img = new Image();
+    img.src = URL.createObjectURL(imgInput);
+
+    img.onload = () => {
+        const finalCanvas = document.createElement("canvas");
+        const ctx = finalCanvas.getContext("2d");
+
+        const width = pdfCanvas.width;
+        const height = pdfCanvas.height + img.height + 20;
+
+        finalCanvas.width = width;
+        finalCanvas.height = height;
+
+        // Draw PDF
+        ctx.drawImage(pdfCanvas, 0, 0);
+
+        // Draw Image under PDF
+        ctx.drawImage(img, 0, pdfCanvas.height + 10);
+
+        mergedDataUrl = finalCanvas.toDataURL("image/png");
+
+        document.getElementById("finalImg").src = mergedDataUrl;
+    };
+}
+
+/* ------------------------------
+   Download Merged Image
+---------------------------------*/
+function downloadMerged() {
+    if (!mergedDataUrl) {
+        alert("Merge first!");
+        return;
+    }
+    const a = document.createElement("a");
+    a.href = mergedDataUrl;
+    a.download = "merged_output.png";
+    a.click();
+}
+
+/* ------------------------------
+   WhatsApp Share (Image as Link)
+---------------------------------*/
+function sendWhatsapp() {
+    if (!mergedDataUrl) {
+        alert("Merge first!");
+        return;
+    }
+    const encoded = encodeURIComponent(mergedDataUrl);
+    const url = "https://wa.me/?text=" + encoded;
+    window.open(url, "_blank");
+}
 </script>
 
 </body>
