@@ -1,0 +1,65 @@
+<input type="file" id="pdfFile" accept="application/pdf">
+<input type="file" id="imgFile" accept="image/*">
+<button onclick="mergeAndPreview()">Merge & Preview</button>
+<div id="preview"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+const { jsPDF } = window.jspdf;
+let pdfFile, imgData;
+
+document.getElementById('pdfFile').addEventListener('change', e=>{ pdfFile=e.target.files[0]; });
+document.getElementById('imgFile').addEventListener('change', e=>{
+    const reader = new FileReader();
+    reader.onload = function(evt){ imgData=evt.target.result; }
+    reader.readAsDataURL(e.target.files[0]);
+});
+
+async function mergeAndPreview(){
+    if(!pdfFile){ alert("Upload PDF first"); return; }
+    const arrayBuffer = await pdfFile.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+    const previewDiv = document.getElementById('preview');
+    previewDiv.innerHTML='';
+
+    for(let i=1;i<=pdf.numPages;i++){
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({scale:1});
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({canvasContext: context, viewport: viewport}).promise;
+        const pdfImgData = canvas.toDataURL('image/jpeg');
+
+        // Create final merged canvas
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = canvas.width;
+        finalCanvas.height = canvas.height + 150; // space for image
+        const ctx = finalCanvas.getContext('2d');
+        ctx.fillStyle='white';
+        ctx.fillRect(0,0,finalCanvas.width,finalCanvas.height);
+        ctx.drawImage(canvas,0,0);
+        if(imgData){
+            const img = new Image();
+            img.src = imgData;
+            await new Promise(r=>img.onload=r);
+            ctx.drawImage(img, 10, canvas.height+5, 100, 100); // 2 inch approx
+        }
+
+        // Preview
+        const mergedImg = new Image();
+        mergedImg.src = finalCanvas.toDataURL();
+        mergedImg.style.width='120px'; // 2 inch
+        mergedImg.style.height='auto';
+        previewDiv.appendChild(mergedImg);
+
+        // Save for jsPDF
+        finalCanvas.mergedData = finalCanvas.toDataURL();
+    }
+    alert("Merge Preview ready!");
+}
+</script>
