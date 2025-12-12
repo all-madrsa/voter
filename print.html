@@ -71,28 +71,31 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
         fullText += strings.join('\n') + '\n';
     }
 
-    // Helper function: extract after label
-    function getValue(labels){
-        for(const lbl of labels){
-            const regex = new RegExp(lbl+'\\s*:?\\s*(.+)', 'i');
-            const match = fullText.match(regex);
-            if(match) return match[1].trim();
+    // Split lines and trim
+    const lines = fullText.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+
+    // Extract only required fields
+    extracted = {}; // reset
+    lines.forEach(line=>{
+        if(line.includes('Name:') || line.includes('नाव:')){
+            extracted.firstName = line.split(':')[1].trim();
         }
-        return '';
-    }
-
-    // Extract required fields with multiple label variants
-    const fullName = getValue(['Name', 'नाव']);
-    const fullNameClean = fullName.replace(/\s+/g,' ').replace(/,/g,' ').trim();
-    const nameParts = fullNameClean.split(' ');
-    extracted.firstName = nameParts[0] || '';
-    extracted.lastName = nameParts.slice(1).join(' ') || '';
-
-    extracted.epic = getValue(['Epic no\\.', 'EPIC No', 'मतदार ओळखपतर् कर्']);
-    extracted.serial = getValue(['Serial No\\.', 'Serial Number', 'अनुकर्मांक']);
-    extracted.partNo = getValue(['Part No\\. and Name', 'Part No and Name', 'भाग क्रमांक आणि नाव']);
-    extracted.constituency = getValue(['Assembly Constituency No\\. and Name', 'Assembly Constituency No and Name', 'विधानसभा मतदारसंघ क्रमांक आणि नाव']);
-    extracted.polling = getValue(['Polling Station Address', 'Polling Station', 'मतदान केंद्राचा पत्ता']);
+        else if(line.includes('Epic no.') || line.includes('EPIC No') || line.includes('मतदार ओळखपतर् कर्')){
+            extracted.epic = line.split(':')[1].trim();
+        }
+        else if(line.includes('Serial No.') || line.includes('अनुक्रमांक')){
+            extracted.serial = line.split(':')[1].trim();
+        }
+        else if(line.includes('Part No.') || line.includes('भाग क्रमांक') ){
+            extracted.partNo = line.split(':')[1].trim();
+        }
+        else if(line.includes('Assembly Constituency') || line.includes('विधानसभा मतदारसंघ क्रमांक')){
+            extracted.constituency = line.split(':')[1].trim();
+        }
+        else if(line.includes('Polling Station') || line.includes('मतदान केंद्राचा पत्ता')){
+            extracted.polling = line.split(':')[1].trim();
+        }
+    });
 
     alert('PDF text extracted successfully!');
 });
@@ -102,7 +105,7 @@ function mergePreview(){
     const div = document.getElementById('preview');
     div.innerHTML = '';
     for(const key in extracted){
-        if(extracted[key]) {
+        if(extracted[key]){
             const row = document.createElement('div');
             row.className = 'slip-row';
             row.innerHTML = `<span class="slip-label">${key.replace(/([A-Z])/g,' $1').trim()}:</span> ${extracted[key]}`;
