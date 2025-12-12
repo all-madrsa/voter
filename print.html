@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Print Menu</title>
+
+<style>
+/* FULLSCREEN */
+html, body {
+  margin:0;
+  padding:0;
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:#000;
+  overflow:hidden;
+  font-family: Arial, sans-serif;
+}
+
+/* BLINKING BACKGROUND */
+@keyframes bgBlink {
+  0%   { background: #1abc9c; }
+  25%  { background: #9b59b6; }
+  50%  { background: #3498db; }
+  75%  { background: #e67e22; }
+  100% { background: #1abc9c; }
+}
+body {
+  animation: bgBlink 6s infinite;
+}
+
+/* LOGOUT BUTTON */
+.logout-btn {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  padding: 6px 14px;
+  font-size: 11px;
+  border-radius: 8px;
+  z-index: 20;
+  background: linear-gradient(145deg,#ff6666,#cc0000);
+  box-shadow: 0 4px #990000;
+  color: white;
+  cursor: pointer;
+  border: none;
+}
+.logout-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px #990000;
+}
+
+/* BUTTON AREA */
+.container {
+  display:flex;
+  flex-direction:column;
+  gap:25px;
+  width:90%;
+  max-width:400px;
+}
+
+/* MAIN BIG 3D BUTTONS */
+.bigBtn {
+  padding: 22px;
+  font-size: 22px;
+  font-weight:bold;
+  text-align:center;
+  color:white;
+  border:none;
+  border-radius:12px;
+  cursor:pointer;
+  background: linear-gradient(145deg,#3498db,#2980b9);
+  box-shadow:0 5px 0 #1c5980,0 10px 15px rgba(0,0,0,0.4);
+  transition:0.2s;
+}
+.bigBtn:hover {
+  filter:brightness(1.15);
+}
+.bigBtn:active {
+  transform:translateY(6px);
+  box-shadow:0 3px 0 #1c5980;
+}
+
+/* RESPONSIVE FIX */
+@media(max-width:600px){
+  .bigBtn {
+    font-size:20px;
+    padding:20px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- SMALL LOGOUT BUTTON -->
+<button class="logout-btn" onclick="window.location.href='index.html'">Logout</button>
+
+<!-- BUTTONS -->
+<div class="container">
+  <button class="bigBtn" onclick="window.open('https://mahasecvoterlist.in/ObjectionOnClick/SearchVoterName','_blank')">Download</button>
+
+  <button class="bigBtn" onclick="window.open('https://electoralsearch.eci.gov.in/','_blank')">Election Search</button>
+
+  <button class="bigBtn" onclick="window.location.href='pdf.html'">Whatsapp Send</button>
+
+  <button class="bigBtn" onclick="window.print()">Print</button>
+</div>
+
+</body>
+</html>
