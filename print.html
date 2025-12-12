@@ -7,7 +7,7 @@
 <style>
 body {font-family: Arial,sans-serif; display:flex; flex-direction:column; align-items:center; padding:10px;}
 input, button {margin:5px; padding:8px; font-size:14px;}
-#preview {border:1px solid #ccc; padding:10px; margin-top:20px; width:400px;}
+#preview {border:1px solid #ccc; padding:10px; margin-top:20px; width:350px;}
 .slip-row {margin-bottom:5px; font-size:14px;}
 #voterImg {width:80px; height:80px; object-fit:cover; margin-top:10px;}
 .btn3d {padding:8px 15px; font-size:12px; border-radius:8px; color:#fff; cursor:pointer; border:none; background:linear-gradient(145deg,#3498db,#2980b9); box-shadow:0 3px 0 #1c5980,0 4px 8px rgba(0,0,0,0.4);}
@@ -73,38 +73,30 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
     // Split lines and trim
     const lines = fullText.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
 
-    // Reset extracted object
+    // Reset extracted
     extracted = {};
 
     lines.forEach(line=>{
-        if(line.toLowerCase().includes('name:') && !extracted.firstName){
-            const namePart = line.split(':')[1]?.trim() || '';
-            const parts = namePart.split(' ');
+        if(line.match(/Name:/i) && !extracted.firstName){
+            let name = line.split(':')[1]?.trim() || '';
+            const parts = name.split(' ');
             extracted.firstName = parts[0] || '';
             extracted.lastName = parts.slice(1).join(' ') || '';
-        }
-        else if(line.toLowerCase().includes("husband's name:") || line.toLowerCase().includes("पति")) {
+        } else if(line.match(/Husband|पतीचे नाव/i)){
             extracted.husbandName = line.split(':')[1]?.trim() || '';
-        }
-        else if(line.toLowerCase().includes('date of birth') || line.toLowerCase().includes('dob')) {
+        } else if(line.match(/Date of Birth|जन्मतारीख/i)){
             extracted.dob = line.split(':')[1]?.trim() || '';
-        }
-        else if(line.toLowerCase().includes('epic') || line.toLowerCase().includes('मतदार')) {
+        } else if(line.match(/Epic no|EPIC/i)){
             extracted.epic = line.split(':')[1]?.trim() || '';
-        }
-        else if(line.toLowerCase().includes('serial') || line.toLowerCase().includes('अनुक्रमांक')) {
+        } else if(line.match(/Serial No|अनुक्रमांक/i)){
             extracted.serial = line.split(':')[1]?.trim() || '';
-        }
-        else if(line.toLowerCase().includes('part no') || line.toLowerCase().includes('भाग')) {
+        } else if(line.match(/Part No/i)){
             extracted.partNo = line.split(':')[1]?.trim() || '';
-        }
-        else if(line.toLowerCase().includes('assembly constituency') || line.toLowerCase().includes('विधानसभा')) {
+        } else if(line.match(/Assembly Constituency/i)){
             extracted.constituency = line.split(':')[1]?.trim() || '';
-        }
-        else if(line.toLowerCase().includes('polling station') || line.toLowerCase().includes('मतदान केंद्र')) {
+        } else if(line.match(/Polling Station|मतदान केंद्र/i)){
             extracted.polling = line.split(':')[1]?.trim() || '';
-        }
-        else if(line.toLowerCase().includes('address') || line.toLowerCase().includes('पत्ता')) {
+        } else if(line.match(/Address|पत्ता/i)){
             extracted.address = line.split(':')[1]?.trim() || '';
         }
     });
@@ -137,24 +129,28 @@ function mergePreview(){
 async function downloadPDF(){
     if(!Object.keys(extracted).length){ alert('Upload PDF first!'); return; }
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({unit:'mm', format:'a4'}); // A4 for full content
-    doc.setFont("helvetica");
-    doc.setFontSize(12);
-    let y = 20;
+    const doc = new jsPDF({unit:'mm', format:'a6'});
+    let y = 10;
+    const lineHeight = 6;
 
     for(const key in extracted){
         if(extracted[key]){
-            let text = `${key}: ${extracted[key]}`;
-            let lines = doc.splitTextToSize(text, 180); // wrap text to page width
-            doc.text(lines, 10, y);
-            y += lines.length * 7;
+            // Split long text into multiple lines
+            const text = extracted[key];
+            const lines = doc.splitTextToSize(text, 80); // wrap width
+            doc.text(`${key}:`, 10, y);
+            y += lineHeight;
+            lines.forEach(line=>{
+                doc.text(line, 12, y);
+                y += lineHeight;
+            });
+            y += 2; // extra spacing
         }
     }
 
     const savedImg = localStorage.getItem('voterImage');
     if(savedImg){
-        doc.addImage(savedImg, 'JPEG', 10, y, 50, 50);
-        y += 55;
+        doc.addImage(savedImg, 'JPEG', 10, y, 40, 40);
     }
 
     doc.save('voter-slip.pdf');
