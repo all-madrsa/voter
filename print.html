@@ -3,20 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PDF + Voter Image Merge Tool</title>
+<title>PDF + Image Merge Tool</title>
 <style>
 body {font-family: Arial,sans-serif; display:flex; flex-direction:column; align-items:center; padding:10px;}
-h2 {margin-bottom:10px;}
+h2 {margin-bottom:15px;}
 input, button {margin:5px; padding:8px; font-size:12px;}
-#preview {border:1px solid #ccc; padding:10px; margin-top:20px; display:flex; flex-direction:column; align-items:center;}
-#preview img {margin-top:5px; object-fit:contain;}
-.btn3d {
-    padding:5px 12px; font-size:10px; border-radius:6px;
-    color:#fff; cursor:pointer; border:none;
-    background:linear-gradient(145deg,#3498db,#2980b9);
-    box-shadow:0 3px 0 #1c5980,0 4px 8px rgba(0,0,0,0.4);
-}
-.btn3d:active {transform:translateY(2px); box-shadow:0 1px 0 #1c5980,0 2px 4px rgba(0,0,0,0.4);}
+#preview {border:1px solid #ccc; padding:10px; margin-top:15px; display:flex; flex-direction:column; align-items:center;}
+#preview img, #preview div {margin-top:5px; width:120px; text-align:left;}
+.btn3d {padding:6px 12px; font-size:10px; border-radius:6px; color:#fff; cursor:pointer; border:none; background:linear-gradient(145deg,#3498db,#2980b9); box-shadow:0 2px 0 #1c5980,0 4px 8px rgba(0,0,0,0.3);}
+.btn3d:active {transform:translateY(2px); box-shadow:0 1px 0 #1c5980,0 2px 4px rgba(0,0,0,0.3);}
 #imagesList {display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;}
 .img-box {position:relative;}
 .delete-btn {position:absolute; top:0; right:0; background:red; color:white; border:none; border-radius:50%; width:18px; height:18px; cursor:pointer;}
@@ -24,7 +19,7 @@ input, button {margin:5px; padding:8px; font-size:12px;}
 </head>
 <body>
 
-<h2>PDF + Voter Image Merge Tool</h2>
+<h2>PDF + Image Merge Tool</h2>
 
 <label>Select PDF File:</label>
 <input type="file" id="pdfFile" accept="application/pdf">
@@ -47,26 +42,21 @@ input, button {margin:5px; padding:8px; font-size:12px;}
 const { jsPDF } = window.jspdf;
 let pdfImages = [];
 let voterImg = null;
-let voterData = {};
+let extractedData = {};
 
 // Load saved voter image
 const savedImg = localStorage.getItem('voterImage');
 if(savedImg){ voterImg = savedImg; displayVoterImage(voterImg); }
 
-// Safe extraction helper
-function extractFieldSafe(text, regex){ 
-    const m = text.match(regex); 
-    return m ? m[1].trim() : ''; 
-}
-
-// PDF Upload and extract fields
+// PDF upload and extract
 document.getElementById('pdfFile').addEventListener('change', async function(){
     const file = this.files[0];
     if(!file) return;
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
     pdfImages = [];
-    voterData = {};
+    extractedData = {}; // reset
+    
     for(let i=1;i<=pdf.numPages;i++){
         const page = await pdf.getPage(i);
         const viewport = page.getViewport({scale:2});
@@ -74,24 +64,24 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
         canvas.width = viewport.width;
         canvas.height = viewport.height;
         const ctx = canvas.getContext('2d');
+        const content = await page.getTextContent();
+        const pageText = content.items.map(item=>item.str).join('\n');
+        
+        // Extract required fields (if missing, set empty)
+        extractedData['First Name'] = extractedData['First Name'] || (pageText.match(/First Name\s*[:\-]\s*(.*)/i)||['',''])[1].trim();
+        extractedData['Last Name'] = extractedData['Last Name'] || (pageText.match(/Last Name\s*[:\-]\s*(.*)/i)||['',''])[1].trim();
+        extractedData['EPIC No'] = extractedData['EPIC No'] || (pageText.match(/EPIC\s*No\s*[:\-]\s*(.*)/i)||['',''])[1].trim();
+        extractedData['Polling Station'] = extractedData['Polling Station'] || (pageText.match(/Polling Station\s*[:\-]\s*(.*)/i)||['',''])[1].trim();
+        extractedData['Part Number'] = extractedData['Part Number'] || (pageText.match(/Part Number\s*[:\-]\s*(.*)/i)||['',''])[1].trim();
+        extractedData['Part Serial'] = extractedData['Part Serial'] || (pageText.match(/Part Serial\s*[:\-]\s*(.*)/i)||['',''])[1].trim();
+
         await page.render({canvasContext: ctx, viewport: viewport}).promise;
         pdfImages.push(canvas.toDataURL('image/jpeg'));
-
-        const content = await page.getTextContent();
-        const text = content.items.map(item=>item.str).join(' ');
-
-        // Extract only required fields safely
-        voterData["First Name"] = extractFieldSafe(text,/पहिले नाव \/ First Name\s*:\s*(.*)/i);
-        voterData["Last Name"] = extractFieldSafe(text,/आडनाव \/ Last Name\s*:\s*(.*)/i);
-        voterData["EPIC No"] = extractFieldSafe(text,/EPIC क्रमांक \/ EPIC No\s*:\s*(.*)/i);
-        voterData["Polling Station"] = extractFieldSafe(text,/मतदान केंद्र \/ Polling Station\s*:\s*(.*)/i);
-        voterData["Part Number"] = extractFieldSafe(text,/भाग क्रमांक-भागाचे नाव \/ Part Number Part Name\s*:\s*(.*)/i);
-        voterData["Part Serial"] = extractFieldSafe(text,/भाग अनुक्रम क्रमांक \/ Part Serial Number\s*:\s*(.*)/i);
     }
-    alert("PDF processed and fields extracted safely!");
+    alert("PDF processed successfully!");
 });
 
-// Voter image upload and save
+// Voter image upload
 document.getElementById('imgFile').addEventListener('change', function(){
     const file = this.files[0];
     if(!file) return;
@@ -110,7 +100,7 @@ function displayVoterImage(src){
     const box = document.createElement('div');
     box.className='img-box';
     const img=document.createElement('img');
-    img.src=src; img.style.width='100px'; img.style.height='100px';
+    img.src=src; img.style.width='80px'; img.style.height='80px';
     const del = document.createElement('button');
     del.innerText='X'; del.className='delete-btn';
     del.onclick=()=>{ localStorage.removeItem('voterImage'); voterImg=null; div.innerHTML=''; };
@@ -122,16 +112,23 @@ function mergePreview(){
     if(pdfImages.length===0){ alert("Upload PDF first"); return; }
     const preview = document.getElementById('preview');
     preview.innerHTML='';
-
+    
     // PDF pages preview
     pdfImages.forEach(src=>{
         const img = new Image();
-        img.src=src;
+        img.src = src;
         img.style.width='120px';
         img.style.height='auto';
         preview.appendChild(img);
     });
-
+    
+    // Text fields preview
+    Object.entries(extractedData).forEach(([k,v])=>{
+        const div = document.createElement('div');
+        div.innerText = `${k}: ${v}`;
+        preview.appendChild(div);
+    });
+    
     // Voter image preview
     if(voterImg){
         const img = new Image();
@@ -140,57 +137,43 @@ function mergePreview(){
         img.style.height='40px';
         preview.appendChild(img);
     }
-
-    // Text fields preview
-    const fieldsDiv = document.createElement('div');
-    fieldsDiv.style.fontSize='10px';
-    fieldsDiv.style.marginTop='5px';
-    for(const [key,val] of Object.entries(voterData)){
-        const d = document.createElement('div');
-        d.innerText = `${key}: ${val}`;
-        fieldsDiv.appendChild(d);
-    }
-    preview.appendChild(fieldsDiv);
 }
 
-// Generate jsPDF for mini printer
+// Generate single page jsPDF dynamically
 async function generateDoc(){
     if(pdfImages.length===0){ alert("Upload PDF first"); return null; }
-    const doc = new jsPDF({unit:'mm', format:[50,200]}); // 50mm width
+    const doc = new jsPDF({unit:'mm', format:[50,200]}); // 2 inch width
     let y=5;
-
-    // PDF pages stacked
+    
+    // Add PDF images
     for(const src of pdfImages){
         const img = new Image();
         img.src=src;
         await new Promise(r=>img.onload=r);
-        const imgProps = doc.getImageProperties(img);
+        const props = doc.getImageProperties(img);
         const pdfWidth = 45;
-        const pdfHeight = (imgProps.height*pdfWidth)/imgProps.width;
+        const pdfHeight = (props.height*pdfWidth)/props.width;
         doc.addImage(img,'JPEG',5,y,pdfWidth,pdfHeight);
         y+=pdfHeight+2;
     }
-
-    // Voter image
+    
+    // Add extracted text
+    Object.entries(extractedData).forEach(([k,v])=>{
+        doc.text(`${k}: ${v}`,5,y);
+        y+=4;
+    });
+    
+    // Add voter image below text
     if(voterImg){
         const img = new Image();
         img.src=voterImg;
         await new Promise(r=>img.onload=r);
         doc.addImage(voterImg,'JPEG',5,y,40,40);
-        y+=42;
     }
-
-    // Extracted text fields
-    for(const [key,val] of Object.entries(voterData)){
-        doc.text(`${key}: ${val}`,5,y);
-        y+=4;
-        if(y>190){ doc.addPage(); y=5; }
-    }
-
+    
     return doc;
 }
 
-// Print / Download / WhatsApp
 async function printDoc(){
     const doc = await generateDoc();
     if(doc){ doc.autoPrint(); window.open(doc.output('bloburl'),'_blank'); }
