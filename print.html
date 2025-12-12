@@ -8,8 +8,8 @@
 body {font-family: Arial,sans-serif; display:flex; flex-direction:column; align-items:center; padding:10px;}
 h2 {margin-bottom:20px;}
 input, button {margin:10px; padding:10px;}
-#preview {border:1px solid #ccc; padding:10px; margin-top:20px; display:flex; flex-direction:column; align-items:center;}
-#preview img {margin-top:5px; object-fit:contain;}
+#preview {border:1px solid #ccc; padding:10px; margin-top:20px; display:flex; flex-direction:column; align-items:center; background:#f9f9f9;}
+#preview img {margin-top:10px; object-fit:contain; border:1px solid #ccc;}
 .btn3d {
     padding:15px 30px; font-size:16px; border-radius:12px;
     color:#fff; cursor:pointer; border:none;
@@ -51,10 +51,11 @@ const { jsPDF } = window.jspdf;
 let pdfPages = [];
 let imgData = null;
 
-// Load saved image
+// Load saved image from localStorage
 const savedImage = localStorage.getItem('voterImage');
 if(savedImage){ imgData = savedImage; displayImage(imgData); }
 
+// PDF upload
 document.getElementById('pdfFile').addEventListener('change', async function(){
     const file = this.files[0];
     if(!file) return;
@@ -74,6 +75,7 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
     alert("PDF processed successfully!");
 });
 
+// Image upload
 document.getElementById('imgFile').addEventListener('change', function(){
     const file = this.files[0];
     if(!file) return;
@@ -99,7 +101,7 @@ function displayImage(src){
     box.appendChild(img); box.appendChild(del); div.appendChild(box);
 }
 
-// Merge preview using HTML
+// Merge preview
 function mergePreview(){
     if(pdfPages.length===0){ alert("Upload PDF first"); return; }
     const previewDiv = document.getElementById('preview');
@@ -108,7 +110,7 @@ function mergePreview(){
     pdfPages.forEach(pageData=>{
         const img = new Image();
         img.src = pageData;
-        img.style.width='100%'; // fit preview width
+        img.style.width='100%';
         img.style.height='auto';
         previewDiv.appendChild(img);
     });
@@ -116,32 +118,36 @@ function mergePreview(){
     if(imgData){
         const img = new Image();
         img.src = imgData;
-        img.style.width='100%'; // full width under pdf
-        img.style.height='auto';
+        img.style.width='50px'; // 2 inch approx
+        img.style.height='50px';
         img.style.marginTop='5px';
         previewDiv.appendChild(img);
     }
 }
 
-// Generate jsPDF for print/download/WhatsApp
+// Generate jsPDF
 async function generateDoc(){
     if(pdfPages.length===0){ alert("Upload PDF first"); return null; }
-    const doc = new jsPDF({unit:'mm', format:[80, 300]}); // pocket printer approx 80mm width
+    const doc = new jsPDF({unit:'mm', format:[50,200]}); // width 2 inch, height flexible
     let y=5;
     for(const pageData of pdfPages){
         const img = new Image();
         img.src = pageData;
         await new Promise(r=>img.onload=r);
-        const pdfWidth = 75; // scale to fit paper width
-        const pdfHeight = (img.height * pdfWidth)/img.width;
+        const props = doc.getImageProperties(img);
+        const pdfWidth = 45;
+        const pdfHeight = (props.height * pdfWidth) / props.width;
+        if(y + pdfHeight > 200){ doc.addPage(); y=5; }
         doc.addImage(img,'JPEG',5,y,pdfWidth,pdfHeight);
-        y+=pdfHeight+2;
+        y+=pdfHeight + 5;
     }
+
     if(imgData){
         const img = new Image();
         img.src = imgData;
         await new Promise(r=>img.onload=r);
-        doc.addImage(imgData,'JPEG',5,y,50,50); // fixed 2 inch size
+        if(y + 50 > 200){ doc.addPage(); y=5; }
+        doc.addImage(imgData,'JPEG',5,y,40,40);
     }
     return doc;
 }
@@ -150,10 +156,12 @@ async function printDoc(){
     const doc = await generateDoc();
     if(doc){ doc.autoPrint(); window.open(doc.output('bloburl'),'_blank'); }
 }
+
 async function downloadDoc(){
     const doc = await generateDoc();
     if(doc) doc.save('Voter_Merged.pdf');
 }
+
 async function sendWhatsApp(){
     const doc = await generateDoc();
     const blob = doc.output('blob');
@@ -162,6 +170,5 @@ async function sendWhatsApp(){
     window.open(`https://wa.me/?text=Voter PDF: ${url}`,'_blank');
 }
 </script>
-
 </body>
 </html>
