@@ -71,17 +71,15 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
         fullText += strings.join('\n') + '\n';
     }
 
-    const lines = fullText.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+    const lines = fullText.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+    extracted = {}; // reset
 
-    // Reset extracted object
-    extracted = {};
-
-    lines.forEach(line => {
+    lines.forEach(line=>{
         if(line.match(/Name:/) && !line.match(/Husband/)){
-            let fullName = line.split(':')[1].trim(); // "Nilofar Mohammed Islam Khan"
+            let fullName = line.split(':')[1].trim();
             let nameParts = fullName.split(' ');
-            extracted.firstName = nameParts[0]; // Nilofar
-            extracted.lastName = nameParts.slice(1).join(' '); // Mohammed Islam Khan
+            extracted.firstName = nameParts[0] || '';
+            extracted.lastName = nameParts.slice(1).join(' ') || '';
         }
         else if(line.match(/Husband's Name:/)){
             extracted.husbandName = line.split(':')[1].trim();
@@ -95,10 +93,10 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
         else if(line.match(/Part No\.|भाग क्रमांक/)){
             extracted.partNo = line.split(':')[1].trim();
         }
-        else if(line.match(/Assembly Constituency|विधानसभा मतदारसंघ/)){
+        else if(line.match(/Assembly Constituency No\. and Name|विधानसभा मतदारसंघ/)){
             extracted.constituency = line.split(':')[1].trim();
         }
-        else if(line.match(/Polling Station|मतदान केंद्र/)){
+        else if(line.match(/Polling Station Address|मतदान केंद्र/)){
             extracted.polling = line.split(':')[1].trim();
         }
         else if(line.match(/Date of Birth|जन्मतारीख/)){
@@ -142,7 +140,7 @@ async function downloadPDF(){
     for(const key in extracted){
         if(extracted[key]){
             doc.text(`${key.replace(/([A-Z])/g,' $1').trim()}: ${extracted[key]}`, 10, y);
-            y += 8;
+            y += 10;
         }
     }
     const savedImg = localStorage.getItem('voterImage');
