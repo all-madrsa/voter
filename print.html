@@ -53,10 +53,27 @@
     }
 
     img.merged {
-        max-width: 90%;
+        max-width: 95%;
         border: 2px solid #000;
         border-radius: 10px;
         margin-top: 20px;
+    }
+
+    /* PRINT CLEAN MODE — no header/footer */
+    @media print {
+        @page { margin: 0; }
+        body {
+            margin: 0;
+            padding: 0;
+            background: white;
+        }
+        .upload-box, h2, .btn {
+            display: none;
+        }
+        #finalImg {
+            width: 100%;
+            border: none;
+        }
     }
 </style>
 </head>
@@ -94,9 +111,7 @@
 <script>
 let mergedDataUrl = "";
 
-/* ------------------------------
-   Convert PDF → Canvas Image
----------------------------------*/
+/* Convert PDF → Canvas Image */
 function pdfToImage(pdfFile) {
     return new Promise((resolve) => {
         const fileReader = new FileReader();
@@ -106,7 +121,7 @@ function pdfToImage(pdfFile) {
 
             pdfjsLib.getDocument(typedarray).promise.then(pdf => {
                 pdf.getPage(1).then(page => {
-                    const viewport = page.getViewport({ scale: 2 });
+                    const viewport = page.getViewport({ scale: 3 });
 
                     let canvas = document.createElement("canvas");
                     let ctx = canvas.getContext("2d");
@@ -125,9 +140,7 @@ function pdfToImage(pdfFile) {
     });
 }
 
-/* ------------------------------
-   Merge PDF Image + Uploaded Image
----------------------------------*/
+/* Merge PDF image + Uploaded image */
 async function mergeFiles() {
     const pdfInput = document.getElementById("pdfFile").files[0];
     const imgInput = document.getElementById("imgFile").files[0];
@@ -137,10 +150,8 @@ async function mergeFiles() {
         return;
     }
 
-    // Convert PDF → Canvas Image
     const pdfCanvas = await pdfToImage(pdfInput);
 
-    // Load uploaded image
     const img = new Image();
     img.src = URL.createObjectURL(imgInput);
 
@@ -154,10 +165,7 @@ async function mergeFiles() {
         finalCanvas.width = width;
         finalCanvas.height = height;
 
-        // Draw PDF
         ctx.drawImage(pdfCanvas, 0, 0);
-
-        // Draw Image under PDF
         ctx.drawImage(img, 0, pdfCanvas.height + 10);
 
         mergedDataUrl = finalCanvas.toDataURL("image/png");
@@ -166,31 +174,22 @@ async function mergeFiles() {
     };
 }
 
-/* ------------------------------
-   Download Merged Image
----------------------------------*/
+/* Download merged output */
 function downloadMerged() {
-    if (!mergedDataUrl) {
-        alert("Merge first!");
-        return;
-    }
+    if (!mergedDataUrl) return alert("Merge first!");
+
     const a = document.createElement("a");
     a.href = mergedDataUrl;
     a.download = "merged_output.png";
     a.click();
 }
 
-/* ------------------------------
-   WhatsApp Share (Image as Link)
----------------------------------*/
+/* WhatsApp send */
 function sendWhatsapp() {
-    if (!mergedDataUrl) {
-        alert("Merge first!");
-        return;
-    }
+    if (!mergedDataUrl) return alert("Merge first!");
+
     const encoded = encodeURIComponent(mergedDataUrl);
-    const url = "https://wa.me/?text=" + encoded;
-    window.open(url, "_blank");
+    window.open("https://wa.me/?text=" + encoded, "_blank");
 }
 </script>
 
