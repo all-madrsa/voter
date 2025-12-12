@@ -59,29 +59,23 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
         const strings = content.items.map(item => item.str);
-        fullText += strings.join('\n') + '\n';
+        fullText += strings.join(' ') + ' ';
     }
 
-    // Normalize text for easier matching
-    const lines = fullText.split(/\r?\n/).map(l => l.trim()).filter(l => l);
-
-    function getValue(keywords){
-        for(const kw of keywords){
-            const index = lines.findIndex(line => line.includes(kw));
-            if(index >= 0 && index+1 < lines.length){
-                return lines[index+1].trim();
-            }
-        }
-        return '';
+    // Extract only required fields using regex
+    function getField(regex){
+        const match = fullText.match(regex);
+        return match ? match[1].trim() : '';
     }
 
-    // Extract required fields
-    extracted.firstName = getValue(["पहिले नाव / First Name"]);
-    extracted.lastName = getValue(["आडनाव / Last Name"]);
-    extracted.epic = getValue(["EPIC क्रमांक / EPIC No"]);
-    extracted.polling = getValue(["मतदान केंद्र / Polling Station"]);
-    extracted.partNo = getValue(["भाग क्रमांक-भागाचे नाव / Part Number Part Name"]);
-    extracted.serial = getValue(["भाग अनुक्रम क्रमांक / Part Serial Number"]);
+    extracted = {
+        firstName: getField(/First Name\s*[:\-]?\s*([A-Za-z\s]+)/i),
+        lastName: getField(/Last Name\s*[:\-]?\s*([A-Za-z\s]+)/i),
+        epic: getField(/Epic no\.?\s*[:\-]?\s*(\S+)/i),
+        serial: getField(/Serial No\.?\s*[:\-]?\s*(\S+)/i),
+        partNo: getField(/Part No\.?\s*[:\-]?\s*(\S+)/i),
+        polling: getField(/Polling Station Address\s*[:\-]?\s*(.+)/i)
+    };
 
     alert('PDF text extracted successfully!');
 });
@@ -90,7 +84,7 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
 function mergePreview(){
     const div = document.getElementById('preview');
     div.innerHTML = '';
-    if(!extracted.firstName){ alert('Upload PDF first!'); return; }
+    if(!extracted.epic){ alert('Upload PDF first!'); return; }
 
     for(const key in extracted){
         const row = document.createElement('div');
@@ -108,12 +102,12 @@ function mergePreview(){
     }
 }
 
-// Download A6 PDF
+// Download A6 PDF with extracted info + voter image
 async function downloadPDF(){
-    if(!extracted.firstName){ alert('Upload PDF first!'); return; }
+    if(!extracted.epic){ alert('Upload PDF first!'); return; }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({unit:'mm', format:'a6'});
-    let y=10;
+    let y = 10;
 
     for(const key in extracted){
         doc.text(`${key.replace(/([A-Z])/g,' $1').trim()}: ${extracted[key]}`, 10, y);
