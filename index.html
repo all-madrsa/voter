@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Browser PWA</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+
+  <div id="header">🌐 My Browser Logo</div>
+
+  <iframe id="browser" src="https://example.com"></iframe>
+
+  <div id="footer">
+    <button onclick="goBack()">⏪ Back</button>
+    <button onclick="goForward()">⏩ Forward</button>
+    <input type="text" id="urlInput" placeholder="Enter URL" />
+    <button onclick="goURL()">Go</button>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
