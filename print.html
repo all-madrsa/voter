@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Voter Slip Extract & PDF</title>
 <style>
-body {font-family: Arial, sans-serif; display:flex; flex-direction:column; align-items:center; padding:10px;}
+body {font-family: Arial,sans-serif; display:flex; flex-direction:column; align-items:center; padding:10px;}
 input, button {margin:5px; padding:8px; font-size:14px;}
 #preview {border:1px solid #ccc; padding:10px; margin-top:20px; width:350px;}
 .slip-row {margin-bottom:5px; font-size:14px;}
@@ -71,38 +71,34 @@ document.getElementById('pdfFile').addEventListener('change', async function(){
     }
 
     const lines = fullText.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
-
     extracted = {}; // reset
 
     lines.forEach(line=>{
-        if(/Name\s*:/.test(line)){
-            let name = line.split(':')[1].trim();
-            const nameParts = name.split(' ');
-            extracted.firstName = nameParts[0];
-            extracted.lastName = nameParts.slice(1).join(' ');
+        if(line.includes('Name:') && !extracted.firstName){
+            const name = line.split(':')[1].trim();
+            const parts = name.split(' ');
+            extracted.firstName = parts[0] || '';
+            extracted.lastName = parts.slice(1).join(' ') || '';
         }
-        else if(/Husband|Father/i.test(line)){
+        else if(line.includes("Husband's Name:")){
             extracted.husbandName = line.split(':')[1].trim();
         }
-        else if(/Date of Birth|DOB|जन्मतारीख/i.test(line)){
+        else if(line.includes('Date of Birth') || line.includes('DOB')){
             extracted.dob = line.split(':')[1].trim();
         }
-        else if(/Gender|स्तर्ी/i.test(line)){
-            extracted.gender = line.split(':')[1].trim();
-        }
-        else if(/Epic no|EPIC|मतदार ओळखपतर्/i.test(line)){
+        else if(line.includes('Epic no.') || line.includes('EPIC No')){
             extracted.epic = line.split(':')[1].trim();
         }
-        else if(/Serial No|Serial|अनुक्रमांक/i.test(line)){
+        else if(line.includes('Serial No.')){
             extracted.serial = line.split(':')[1].trim();
         }
-        else if(/Part No/i.test(line)){
+        else if(line.includes('Part No.') ){
             extracted.partNo = line.split(':')[1].trim();
         }
-        else if(/Assembly Constituency/i.test(line)){
+        else if(line.includes('Assembly Constituency') ){
             extracted.constituency = line.split(':')[1].trim();
         }
-        else if(/Polling Station/i.test(line)){
+        else if(line.includes('Polling Station') ){
             extracted.polling = line.split(':')[1].trim();
         }
     });
@@ -118,7 +114,7 @@ function mergePreview(){
         if(extracted[key]){
             const row = document.createElement('div');
             row.className = 'slip-row';
-            row.textContent = `${key}: ${extracted[key]}`;
+            row.innerHTML = `${key}: ${extracted[key]}`;
             div.appendChild(row);
         }
     }
@@ -133,20 +129,34 @@ function mergePreview(){
 
 // Download PDF
 async function downloadPDF(){
-    if(!Object.keys(extracted).length){ alert('Upload PDF first!'); return; }
+    if(!Object.keys(extracted).length){ 
+        alert('Upload PDF first!'); 
+        return; 
+    }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({unit:'mm', format:'a6'});
     let y = 10;
+
     for(const key in extracted){
         if(extracted[key]){
-            doc.text(`${key}: ${extracted[key]}`, 10, y);
+            let text = extracted[key].replace(/\u2018|\u2019/g,"'").replace(/\u201c|\u201d/g,'"');
+            doc.text(`${key}: ${text}`, 10, y);
             y += 10;
         }
     }
+
     const savedImg = localStorage.getItem('voterImage');
     if(savedImg){
-        doc.addImage(savedImg, 'JPEG', 10, y, 40, 40);
+        await new Promise((resolve)=>{
+            const img = new Image();
+            img.src = savedImg;
+            img.onload = ()=>{
+                doc.addImage(img, 'JPEG', 10, y, 40, 40);
+                resolve();
+            }
+        });
     }
+
     doc.save('voter-slip.pdf');
 }
 </script>
