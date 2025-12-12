@@ -5,24 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PDF + Image Merge Tool</title>
 <style>
-body {font-family: Arial,sans-serif; display:flex; flex-direction:column; align-items:center; padding:10px;}
-h2 {margin-bottom:20px;}
-input, button {margin:10px; padding:10px;}
-#preview {border:1px solid #ccc; padding:10px; margin-top:20px; display:flex; flex-direction:column; align-items:center; background:#f9f9f9;}
-#preview img {margin-top:10px; object-fit:contain; border:1px solid #ccc;}
+body {font-family: Arial, sans-serif; display:flex; flex-direction:column; align-items:center; padding:10px;}
+h2 {margin-bottom:10px;}
+input, button {margin:5px; padding:5px; font-size:12px;}
+#preview {border:1px solid #ccc; padding:10px; margin-top:10px; display:flex; flex-direction:column; align-items:center;}
+#preview canvas {margin-top:5px;}
 .btn3d {
-    padding:15px 30px; font-size:16px; border-radius:12px;
+    padding:8px 15px; font-size:12px; border-radius:8px;
     color:#fff; cursor:pointer; border:none;
     background:linear-gradient(145deg,#3498db,#2980b9);
-    box-shadow:0 5px 0 #1c5980,0 8px 15px rgba(0,0,0,0.4);
+    box-shadow:0 3px 0 #1c5980,0 4px 8px rgba(0,0,0,0.4);
 }
 .btn3d:active {
-    transform:translateY(5px);
-    box-shadow:0 2px 0 #1c5980,0 4px 8px rgba(0,0,0,0.4);
+    transform:translateY(3px);
+    box-shadow:0 1px 0 #1c5980,0 2px 4px rgba(0,0,0,0.4);
 }
-#imagesList {display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;}
+#imagesList {display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;}
 .img-box {position:relative;}
-.delete-btn {position:absolute; top:0; right:0; background:red; color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer;}
+.delete-btn {position:absolute; top:0; right:0; background:red; color:white; border:none; border-radius:50%; width:15px; height:15px; cursor:pointer; font-size:10px;}
 </style>
 </head>
 <body>
@@ -51,7 +51,7 @@ const { jsPDF } = window.jspdf;
 let pdfPages = [];
 let imgData = null;
 
-// Load saved image from localStorage
+// Load saved image
 const savedImage = localStorage.getItem('voterImage');
 if(savedImage){ imgData = savedImage; displayImage(imgData); }
 
@@ -94,7 +94,7 @@ function displayImage(src){
     const box = document.createElement('div');
     box.className='img-box';
     const img=document.createElement('img');
-    img.src=src; img.style.width='150px'; img.style.height='150px';
+    img.src=src; img.style.width='60px'; img.style.height='60px';
     const del = document.createElement('button');
     del.innerText='X'; del.className='delete-btn';
     del.onclick=()=>{ localStorage.removeItem('voterImage'); imgData=null; div.innerHTML=''; };
@@ -106,48 +106,77 @@ function mergePreview(){
     if(pdfPages.length===0){ alert("Upload PDF first"); return; }
     const previewDiv = document.getElementById('preview');
     previewDiv.innerHTML='';
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
 
-    pdfPages.forEach(pageData=>{
-        const img = new Image();
-        img.src = pageData;
-        img.style.width='100%';
-        img.style.height='auto';
-        previewDiv.appendChild(img);
-    });
-
-    if(imgData){
-        const img = new Image();
-        img.src = imgData;
-        img.style.width='50px'; // 2 inch approx
-        img.style.height='50px';
-        img.style.marginTop='5px';
-        previewDiv.appendChild(img);
-    }
-}
-
-// Generate jsPDF
-async function generateDoc(){
-    if(pdfPages.length===0){ alert("Upload PDF first"); return null; }
-    const doc = new jsPDF({unit:'mm', format:[50,200]}); // width 2 inch, height flexible
-    let y=5;
+    // Determine total height
+    let totalHeight = 0;
+    const pdfImages = [];
     for(const pageData of pdfPages){
         const img = new Image();
         img.src = pageData;
-        await new Promise(r=>img.onload=r);
-        const props = doc.getImageProperties(img);
-        const pdfWidth = 45;
-        const pdfHeight = (props.height * pdfWidth) / props.width;
-        if(y + pdfHeight > 200){ doc.addPage(); y=5; }
-        doc.addImage(img,'JPEG',5,y,pdfWidth,pdfHeight);
-        y+=pdfHeight + 5;
+        pdfImages.push(img);
+        awaitImageLoad(img);
+        totalHeight += img.height;
+    }
+    let imgHeight = 0;
+    if(imgData){
+        const voterImg = new Image();
+        voterImg.src = imgData;
+        awaitImageLoad(voterImg);
+        imgHeight = 100; // 2 inch approx
+        totalHeight += imgHeight + 5;
+    }
+
+    canvas.width = 300; // pixels, scaled for preview
+    canvas.height = totalHeight;
+    ctx.fillStyle='white';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    let y=0;
+    for(const img of pdfImages){
+        const scale = canvas.width / img.width;
+        const h = img.height * scale;
+        ctx.drawImage(img,0,y,canvas.width,h);
+        y+=h;
     }
 
     if(imgData){
         const img = new Image();
         img.src = imgData;
-        await new Promise(r=>img.onload=r);
-        if(y + 50 > 200){ doc.addPage(); y=5; }
-        doc.addImage(imgData,'JPEG',5,y,40,40);
+        awaitImageLoad(img);
+        ctx.drawImage(img, 0, y, 100, 100); // 2 inch
+    }
+
+    previewDiv.appendChild(canvas);
+}
+
+// Helper
+function awaitImageLoad(img){
+    return new Promise(r=>{ if(img.complete) r(); else img.onload=r; });
+}
+
+// jsPDF generate
+async function generateDoc(){
+    if(pdfPages.length===0){ alert("Upload PDF first"); return null; }
+    const doc = new jsPDF({unit:'mm', format:[50,200]});
+    let y=0;
+    for(const pageData of pdfPages){
+        const img = new Image();
+        img.src = pageData;
+        await awaitImageLoad(img);
+        const pdfWidth = 45;
+        const pdfHeight = (img.height * pdfWidth) / img.width;
+        if(y+pdfHeight > 200){ doc.addPage(); y=0; }
+        doc.addImage(img,'JPEG',5,y,pdfWidth,pdfHeight);
+        y+=pdfHeight + 2;
+    }
+    if(imgData){
+        const img = new Image();
+        img.src = imgData;
+        await awaitImageLoad(img);
+        if(y+40 > 200){ doc.addPage(); y=0; }
+        doc.addImage(img,'JPEG',5,y,40,40);
     }
     return doc;
 }
@@ -156,12 +185,10 @@ async function printDoc(){
     const doc = await generateDoc();
     if(doc){ doc.autoPrint(); window.open(doc.output('bloburl'),'_blank'); }
 }
-
 async function downloadDoc(){
     const doc = await generateDoc();
     if(doc) doc.save('Voter_Merged.pdf');
 }
-
 async function sendWhatsApp(){
     const doc = await generateDoc();
     const blob = doc.output('blob');
