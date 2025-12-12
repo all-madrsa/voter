@@ -3,22 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PDF + Image Merge Tool</title>
+<title>Voter PDF + Image Merge Tool</title>
 <link rel="stylesheet" href="style.css">
 <style>
-body {font-family:Arial,sans-serif; display:flex; flex-direction:column; align-items:center; padding:10px;}
-input, button {margin:10px; padding:10px;}
-#imagesList img {max-width:150px; max-height:150px; border-radius:10px; margin-top:10px;}
-.btn3d {padding:15px 50px; font-size:18px; border-radius:12px; color:#fff; cursor:pointer; border:none; background:linear-gradient(145deg,#3498db,#2980b9); box-shadow:0 5px 0 #1c5980,0 8px 15px rgba(0,0,0,0.4);}
-.btn3d:active {transform:translateY(5px); box-shadow:0 2px 0 #1c5980,0 4px 8px rgba(0,0,0,0.4);}
-#imagesList {display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;}
-.img-box {position:relative;}
-.delete-btn {position:absolute; top:0; right:0; background:red; color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer;}
+body { font-family: Arial,sans-serif; display:flex; flex-direction:column; align-items:center; padding:10px; }
+input, button { margin:10px; padding:10px; font-size:16px; }
+#imagesList img { max-width:150px; max-height:150px; border-radius:10px; margin-top:10px; }
+.btn3d { padding:15px 50px; font-size:18px; border-radius:12px; color:#fff; cursor:pointer; border:none; background:linear-gradient(145deg,#3498db,#2980b9); box-shadow:0 5px 0 #1c5980,0 8px 15px rgba(0,0,0,0.4); }
+.btn3d:active { transform:translateY(5px); box-shadow:0 2px 0 #1c5980,0 4px 8px rgba(0,0,0,0.4); }
+#imagesList { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+.img-box { position:relative; }
+.delete-btn { position:absolute; top:0; right:0; background:red; color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; }
 </style>
 </head>
 <body>
 
-<h2>PDF + Image Merge Tool</h2>
+<h2>Voter PDF + Image Merge Tool</h2>
 
 <label>Select PDF File:</label>
 <input type="file" id="pdfFile" accept="application/pdf">
@@ -94,23 +94,23 @@ function displayImage(src){
     div.appendChild(box);
 }
 
-// Extract only required fields
+// Extract required fields in Marathi + English
 function extractFields(text){
     const fields = {};
-    fields['First Name'] = matchField(text,/First Name:\s*(.*)/i);
-    fields['Last Name'] = matchField(text,/Last Name:\s*(.*)/i);
-    fields['Relative First'] = matchField(text,/Relative First:\s*(.*)/i);
-    fields['Relative Last'] = matchField(text,/Relative Last:\s*(.*)/i);
-    fields['Age'] = matchField(text,/Age:\s*(.*)/i);
-    fields['Gender'] = matchField(text,/Gender:\s*(.*)/i);
-    fields['EPIC No'] = matchField(text,/EPIC No:\s*(.*)/i);
-    fields['State'] = matchField(text,/State:\s*(.*)/i);
-    fields['Parliamentary'] = matchField(text,/Parliamentary Constituency:\s*(.*)/i);
-    fields['Assembly'] = matchField(text,/Assembly Constituency:\s*(.*)/i);
-    fields['Polling'] = matchField(text,/Polling Station:\s*(.*)/i);
-    fields['Part Number'] = matchField(text,/Part Number:\s*(.*)/i);
-    fields['Part Serial'] = matchField(text,/Part Serial:\s*(.*)/i);
-    fields['Polling Date'] = matchField(text,/Polling Date:\s*(.*)/i);
+    fields['First Name'] = matchField(text,/(?:पहिले नाव \/ First Name:?)\s*(.*)/i);
+    fields['Last Name'] = matchField(text,/(?:आडनाव \/ Last Name:?)\s*(.*)/i);
+    fields['Relative First'] = matchField(text,/(?:नातेवाईकाचे पहिले नाव \/ Relative's First Name:?)\s*(.*)/i);
+    fields['Relative Last'] = matchField(text,/(?:नातेवाईकाचे आडनाव \/ Relative's Last Name:?)\s*(.*)/i);
+    fields['Age'] = matchField(text,/(?:वय \/ Age:?)\s*(.*)/i);
+    fields['Gender'] = matchField(text,/(?:लिंग \/ Gender:?)\s*(.*)/i);
+    fields['EPIC No'] = matchField(text,/(?:EPIC क्रमांक \/ EPIC No:?)\s*(.*)/i);
+    fields['State'] = matchField(text,/(?:राज्य \/ State:?)\s*(.*)/i);
+    fields['Parliamentary'] = matchField(text,/(?:संसदीय मतदारसंघ क्रमांक- संसदीय मतदारसंघाचे नाव \/ Parliamentary Constituency:?)\s*(.*)/i);
+    fields['Assembly'] = matchField(text,/(?:विधानसभा मतदारसंघ क्रमांक- विधानसभा मतदारसंघाचे नाव \/ Assembly Constituency:?)\s*(.*)/i);
+    fields['Polling'] = matchField(text,/(?:मतदान केंद्र \/ Polling Station:?)\s*(.*)/i);
+    fields['Part Number'] = matchField(text,/(?:भाग क्रमांक-भागाचे नाव \/ Part Number:?)\s*(.*)/i);
+    fields['Part Serial'] = matchField(text,/(?:भाग अनुक्रम क्रमांक \/ Part Serial:?)\s*(.*)/i);
+    fields['Polling Date'] = matchField(text,/(?:मतदानाची तारीख \/ Polling Date:?)\s*(.*)/i);
     return fields;
 }
 
