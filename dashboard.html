@@ -17,11 +17,66 @@
   <button class="btn3d color-btn" style="background-color:#f1c40f;" onclick="openCloudinaryUpload()">Upload Image</button>
 </div>
 
-<!-- Container for uploaded images -->
 <div id="images" style="margin-top:20px; display:flex; flex-wrap:wrap; gap:10px; justify-content:center;"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-<script src="script.js"></script>
+
+<script>
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyD7x6epAwfshYNzc4G8JvmE4Bu3UNdMB5U",
+  authDomain: "nikah-c234b.firebaseapp.com",
+  databaseURL: "https://nikah-c234b-default-rtdb.firebaseio.com",
+  projectId: "nikah-c234b",
+  storageBucket: "nikah-c234b.appspot.com",
+  messagingSenderId: "760906560668",
+  appId: "1:760906560668:web:0a2c16a47aeaec26482959",
+  measurementId: "G-ENL0FZPEEF"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+// Logout
+const logoutBtn = document.getElementById('logoutBtn');
+logoutBtn.addEventListener('click', () => {
+  auth.signOut().then(() => window.location.href = 'index.html');
+});
+
+// Colorful buttons
+function openLink(button){
+  const link = prompt("Enter URL for this button:");
+  if(link) window.open(link, "_blank");
+}
+
+// Cloudinary Upload
+function openCloudinaryUpload(){
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/*';
+  fileInput.onchange = () => {
+    const file = fileInput.files[0];
+    if(!file) return;
+    const cloudName = 'YOUR_CLOUD_NAME'; // Replace with your Cloud Name
+    const unsignedUploadPreset = 'dlsqxs7zl';
+    const url = `https://api.cloudinary.com/v1_1/${cloudName}/upload`;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', unsignedUploadPreset);
+    fetch(url, { method: 'POST', body: formData })
+      .then(res => res.json())
+      .then(data => {
+        if(data.secure_url){
+          const imagesDiv = document.getElementById('images');
+          const img = document.createElement('img');
+          img.src = data.secure_url;
+          imagesDiv.appendChild(img);
+        } else alert("Upload failed");
+      })
+      .catch(err => alert(err));
+  };
+  fileInput.click();
+}
+</script>
 </body>
 </html>
